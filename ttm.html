@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>糖尿病自我管理測驗</title>
+    <style>
+         html, body { height: 100%; }
+
+body{
+  font-family: Arial, sans-serif;
+  margin:0; padding:0;
+  min-height:100vh;
+  background:none;
+  position:relative;
+}
+
+/* 背景圖 */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background: url("TTM主圖片.webp") center/cover no-repeat fixed; /* ←換成你的圖片路徑 */
+  filter: blur(3px) brightness(0.9);
+  transform: scale(1.03);
+  z-index:0;
+}
+
+/* 白色遮罩 */
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  background: rgba(255,255,255,0.55);
+  z-index:0;
+}
+
+/* 固定導覽條 */
+header{
+  position: sticky;
+  top: 0;
+  background:#2E7D32;
+  color:#fff;
+  padding: 1.2em 1em;
+  text-align:center;
+  font-size:1.6em;
+  font-weight:bold;
+  box-shadow:0 4px 10px rgba(0,0,0,.18);
+  z-index:2;
+}
+
+/* 主要卡片 */
+.container{
+  width: 92%;
+  max-width: 880px;
+  margin: 1.2em auto 2.4em;
+  padding: 1.6em 1.4em;
+  background: #fff;              /* ←把你原本的 rgba(...) 換成實心白 */
+  border-radius: 12px;
+  box-shadow: 0 12px 24px rgba(0,0,0,.12);
+  position: relative;
+  z-index:1;
+}
+
+h2{ text-align:center; color:#1e6a26; }
+.question{ margin:1.4em 0 .6em; font-size:1.12em; font-weight:bold; }
+.options label{ line-height:1.6; }
+
+@media (max-width: 600px){
+  header{ font-size:1.3em; padding:1em .8em; }
+  .container{ width:94%; padding:1.2em 1em; margin-top:1em; }
+}
+
+        .question {
+            margin: 1.5em 0;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .options {
+            margin: 1em 0;
+        }
+        label {
+            display: block;
+            margin: 0.5em 0;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+        input[type="radio"] {
+            margin-right: 10px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 1em;
+            background-color: #2E7D32;
+            color: white;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 1.5em;
+        }
+        button:hover {
+            background-color: #1B5E20;
+        }
+        .result {
+            margin-top: 1.5em;
+            padding: 1em;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #d32f2f;
+            background-color: #f8d7da;
+            border: 1px solid #d32f2f;
+            border-radius: 5px;
+            text-align: center;
+            
+        }
+    </style>
+</head>
+<body>
+    <header>糖尿病自我管理 TTM 測驗</header>
+    <div class="container">
+        <h2>請選擇符合您的糖尿病管理狀況</h2>
+        <form id="ttmForm">
+            <!-- 題目 1 -->
+            <div class="question">1. 您對糖尿病的併發症的想法</div>
+            <div class="options">
+                <label><input type="radio" name="q1" value="1"> 未來6個月內不想知道。</label>
+                <label><input type="radio" name="q1" value="2"> 未來6個月內會想了解。</label>
+                <label><input type="radio" name="q1" value="3"> 可以在未來30天了解。</label>
+                <label><input type="radio" name="q1" value="4"> 開始檢視糖尿病併發症的危害。</label>
+                <label><input type="radio" name="q1" value="5"> 已注意是否有糖尿病併發症6個月。</label>
+            </div>
+
+            <!-- 題目 2 -->
+            <div class="question">2. 您對降血糖藥物知識的想法</div>
+            <div class="options">
+                <label><input type="radio" name="q2" value="1"> 未來6個月內不想知道。</label>
+                <label><input type="radio" name="q2" value="2"> 未來6個月內會想了解。</label>
+                <label><input type="radio" name="q2" value="3"> 可以在未來30天了解。</label>
+                <label><input type="radio" name="q2" value="4"> 已經認識降血糖藥物對我的影響。</label>
+                <label><input type="radio" name="q2" value="5"> 已熟知降血糖藥物對我的影響6個月。</label>
+            </div>
+
+            <!-- 題目 3 -->
+            <div class="question">3. 您對糖尿病飲食的想法</div>
+            <div class="options">
+                <label><input type="radio" name="q3" value="1"> 未來6個月內不想知道。</label>
+                <label><input type="radio" name="q3" value="2"> 未來6個月內會想了解。</label>
+                <label><input type="radio" name="q3" value="3"> 可以在未來30天了解。</label>
+                <label><input type="radio" name="q3" value="4"> 已經調整成糖尿病飲食方式。</label>
+                <label><input type="radio" name="q3" value="5"> 已改變糖尿病飲食習慣6個月以上。</label>
+            </div>
+
+            <!-- 題目 4 -->
+            <div class="question">4. 您對於規則用藥的想法</div>
+            <div class="options">
+                <label><input type="radio" name="q4" value="1"> 未來6個月內不想知道。</label>
+                <label><input type="radio" name="q4" value="2"> 未來6個月內會想了解。</label>
+                <label><input type="radio" name="q4" value="3"> 可以在未來30天了解。</label>
+                <label><input type="radio" name="q4" value="4"> 已規則使用降血糖藥物。</label>
+                <label><input type="radio" name="q4" value="5"> 可維持規則使用降血糖藥物6個月以上。</label>
+            </div>
+
+            <!-- 題目 5 -->
+            <div class="question">5. 您對於血糖自我監測的想法</div>
+            <div class="options">
+                <label><input type="radio" name="q5" value="1"> 未來6個月內不想知道。</label>
+                <label><input type="radio" name="q5" value="2"> 未來6個月內會想了解。</label>
+                <label><input type="radio" name="q5" value="3"> 可以在未來30天了解。</label>
+                <label><input type="radio" name="q5" value="4"> 已開始執行血糖自我監測。</label>
+                <label><input type="radio" name="q5" value="5"> 已執行血糖自我監測6個月。</label>
+            </div>
+
+            <!-- 題目 6 -->
+            <div class="question">6. 您對於尋求不同專業人士協助糖尿病管理的看法</div>
+            <div class="options">
+                <label><input type="radio" name="q6" value="1"> 未來6個月內不想知道。</label>
+                <label><input type="radio" name="q6" value="2"> 未來6個月內會想了解。</label>
+                <label><input type="radio" name="q6" value="3"> 可以在未來30天尋求協助。</label>
+                <label><input type="radio" name="q6" value="4"> 已開始尋求不同專業人員幫忙。</label>
+                <label><input type="radio" name="q6" value="5"> 若有問題時會尋求不同專業人員幫忙已有6個月。</label>
+            </div>
+            <button type="button" onclick="submitTTM()">提交測驗</button>
+          </form>
+          <div id="result" class="result" style="display: none;"></div>
+          <div class="health-link" id="healthLink" style="display: none;">
+            <a href="main.html" target="_blank">前往醫療健康管理平台</a>
+        </div>
+      </div>
+          <!-- 1) 載入共用登入工具 -->
+         <script src="assets/auth.js"></script>
+
+         <script>
+         // 2) 進到 TTM 頁就強制檢查是否有登入，沒登入就回登入頁
+         document.addEventListener('DOMContentLoaded', () => {
+          requireLogin(true);
+        });
+
+         // 3) 覆蓋你原本的 submitTTM：加上「標記完成 + 立即導向平台」
+        function submitTTM() {
+          const scores = [];
+          for (let i = 1; i <= 6; i++) {
+          const picked = document.querySelector(`input[name="q${i}"]:checked`);
+          if (!picked) { alert("請回答所有問題後再提交！"); return; }
+        scores.push(Number(picked.value));
+    }
+
+    // 你的 A/B/C 分組（原邏輯保留）
+    let group, resultClass;
+    if (scores.some(v => v === 1 || v === 2)) {
+      group = "A組（需加強關注）";  resultClass = "a";
+    } else if (scores.every(v => v === 5)) {
+      group = "C組（自主管理佳）";  resultClass = "c";
+    } else if (scores.every(v => v === 3 || v === 4)) {
+      group = "B組（中度自主管理）"; resultClass = "b";
+    } else {
+      group = "B組（中度自主管理）"; resultClass = "b";
+    }
+
+    // 額外：計總分 → 映射 TTM 階段（示範）
+    const total = scores.reduce((a,b)=>a+b, 0);
+    const stage = total <= 12 ? '無意圖期'
+                : total <= 18 ? '準備期'
+                : total <= 24 ? '行動期'
+                : '維持期';
+
+    // （可留存你自己的資料）
+    localStorage.setItem("ttmScores", JSON.stringify(scores));
+    localStorage.setItem("ttmGroup", group);
+
+    // 畫面上仍可顯示結果（教授看得到）
+    const resultDiv = document.getElementById("result");
+    resultDiv.innerHTML = `
+      <p>您的分組結果：<strong>${group}</strong></p>
+      <p>您的各題分數：<strong>${scores.join("、")}</strong></p>
+      <p>您的測驗總分：<strong>${total} 分</strong>（推估階段：<strong>${stage}</strong>）</p>
+    `;
+    resultDiv.className = `result ${resultClass}`;
+    resultDiv.style.display = "block";
+
+    // ✅ 關鍵：把「已完成 TTM」寫進使用者資料
+    const ok = markTtmCompleted(total, stage); // 這個函式在 auth.js 裡
+    if (!ok) {
+      alert("請先從登入頁登入");
+      window.location.replace("index.html");
+      return;
+    }
+
+    // ✅ 立即導向你的平台首頁
+    window.location.replace("main.html");
+  }
+</script>
+</body>
+</html>

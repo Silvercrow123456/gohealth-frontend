@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>穩糖圈 go Health</title>
+  <style>
+    :root{
+      --green:#2E7D32;
+      --green2:#66BB6A;
+      --dark:#1B5E20;
+      --red:#D32F2F;
+      --yellow:#F9A825;
+      --blue:#1976D2;
+      --card:#fff;
+      --bg:#f5f5f5;
+      --muted:#666;
+      --border:#e0e0e0;
+    }
+    body{font-family:Arial, sans-serif; margin:0; padding:0; background:var(--bg);}
+    header{
+    /* 兩層背景：半透明黑色漸層覆蓋在圖片上方 */
+    background:
+    linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)),
+    url("主畫面圖片.jpg") center / cover no-repeat;
+    /* 如果你用中文檔名，改這行： url("images/主畫面圖片.jpg") */
+  
+    color:#fff;
+    min-height: 180px;            /* 讓橫幅看起來像 Banner */
+    padding: 3.5em 1em;           /* 比原本高一些 */
+    display:flex;                 /* 垂直水平置中文字 */
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    font-size:1.8em;
+    font-weight:bold;
+    text-shadow: 0 2px 6px rgba(0,0,0,.5);  /* 讓白字更立體 */
+    box-shadow:0 4px 6px rgba(0,0,0,.25);
+    }
+
+    /* 手機上讓高度再小一點 */
+    @media (max-width: 600px){
+    header{ min-height: 140px; padding: 2.5em 1em; font-size:1.5em; }
+    }
+
+    .container{padding:2em; display:flex; flex-direction:row; justify-content:space-between; gap:1em;}
+    .left,.right{flex:1; min-width:0;}
+    .section{
+      margin-bottom:1.5em; padding:1em; background:var(--card);
+      border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,.1);
+    }
+    .section h2{margin:.2em 0 .6em; color:var(--green);}
+    .left label{display:block; margin:.5em 0 .2em; font-size:1.05em; font-weight:bold;}
+    .left input, .left select, .left textarea{
+      width:100%; padding:.65em; margin-bottom:.8em; border:1px solid #ccc; border-radius:6px; font-size:1em;
+    }
+    .row{display:flex; gap:.8em;}
+    .row .col{flex:1;}
+    button{
+      background:var(--green); color:#fff; border:none; padding:.8em 1.2em; cursor:pointer;
+      border-radius:6px; font-size:1.05em; transition:background .25s ease;
+    }
+    button:hover{background:var(--dark);}
+    .muted{color:var(--muted); font-size:.9em;}
+    .chips{display:flex; gap:.5em; flex-wrap:wrap;}
+    .chip{
+      padding:.3em .6em; border-radius:999px; font-weight:bold; font-size:.9em; color:#fff; display:inline-flex; align-items:center; gap:.4em;
+    }
+    .chip.blue{background:var(--blue);}
+    .chip.green{background:var(--green2);}
+    .chip.yellow{background:var(--yellow); color:#111;}
+    .chip.red{background:var(--red);}
+    .chip.gray{background:#9e9e9e;}
+    .hint{margin-top:.5em; padding:.6em .8em; border-radius:6px; border:1px dashed var(--border); background:#fafafa; color:#333;}
+    .list{border-top:1px solid var(--border); margin-top:.6em;}
+    .list-item{padding:.6em 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:.8em; align-items:center;}
+    .list-item .meta{font-size:.9em; color:#555;}
+    .badge{padding:.15em .5em; border-radius:999px; color:#fff; font-size:.8em; font-weight:bold;}
+    .badge.blue{background:var(--blue);} .badge.green{background:var(--green2);}
+    .badge.yellow{background:var(--yellow); color:#111;} .badge.red{background:var(--red);}
+    .result{margin-top:1em; font-weight:bold;}
+    .ok{color:var(--green);} .err{color:var(--red);}
+    .controls{display:flex; gap:.6em; flex-wrap:wrap;}
+    .video-container{position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px;}
+    .video-container iframe{position:absolute; top:0; left:0; width:100%; height:100%; border:0;}
+    .pill{display:inline-block; padding:.2em .55em; border-radius:999px; background:#eee; color:#333; font-size:.85em; margin-left:.4em;}
+    .right .section p{margin:.4em 0;}
+    .grid{display:grid; grid-template-columns:repeat(2,1fr); gap:.8em;}
+    .footer-note{font-size:.85em; color:#777;}
+    @media (max-width: 900px){
+      .container{flex-direction:column; padding:1em;}
+      .row{flex-direction:column;}
+      .grid{grid-template-columns:1fr;}
+    }
+    /* 活動量單選列：圓點與文字對齊 */
+    .block-label { display:block; margin-bottom:.4em; font-weight:bold; }
+    #actGroup { display: grid; row-gap: .6em; }
+    #actGroup .radio-item { display: flex; align-items: center; gap: .6em; line-height: 1.4; }
+    #actGroup .radio-item input[type="radio"] { margin: 0; width: 18px; height: 18px; accent-color: var(--green2); }
+
+    /* ====== 左側主選單（下拉式設計） ====== */
+    .side-menu {
+      position: sticky;
+      top: 12px;
+      z-index: 2000;
+      margin-bottom: 1.5em;
+    }
+    .menu-header {
+      background: linear-gradient(135deg, var(--green), var(--green2));
+      color: #fff;
+      padding: 0.8em 1.2em;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      font-weight: bold;
+      font-size: 1.1em;
+      transition: background 0.3s;
+    }
+    .menu-header:hover {
+      background: var(--dark);
+    }
+    .menu-header .arrow {
+      transition: transform 0.3s;
+      font-size: 0.8em;
+    }
+    /* 展開時的箭頭反轉 */
+    .side-menu.open .menu-header .arrow {
+      transform: rotate(180deg);
+    }
+    
+    .menu-links {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      width: 100%;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      padding: 0.5em;
+      box-sizing: border-box;
+    }
+    /* 當 side-menu 加上 open class 時顯示選項 */
+    .side-menu.open .menu-links {
+      display: block;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .menu-links a {
+      display: block; 
+      padding: 0.8em 1em; 
+      margin-bottom: 0.3em;
+      border-radius: 6px;
+      background: #fff; 
+      color: #333; 
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+    .menu-links a:hover { 
+      background: #f0fdf4; 
+      border-color: var(--green2); 
+    }
+    .menu-links a.active {
+      background: #e8f5e9;
+      color: var(--dark);
+      font-weight: bold;
+      border-left: 4px solid var(--green);
+    }
+
+    /* 區塊切換 */
+    .content-section { scroll-margin-top: 80px; }
+    .hidden { display: none !important; }
+/* ===== 專業諮詢：更乾淨的表格風格 ===== */
+.consult-grid{
+  display:grid;
+  grid-template-columns: 180px 1fr 1fr;
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  background:#fff;
+}
+
+.cg-label{
+  padding:14px 14px;
+  font-size:16px;
+  font-weight:700;
+  color:#1b1b1b;
+  background:#f8faf8;
+  border-right:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+
+.cg-field{
+  padding:12px 14px;
+  border-bottom:1px solid var(--border);
+  background:#fff;
+}
+
+.cg-span2{ grid-column: 2 / 4; }
+
+.consult-grid select,
+.consult-grid input,
+.consult-grid textarea{
+  width:100%;
+  font-size:16px;
+  padding:10px 12px;
+  border:1px solid #d6d6d6;
+  border-radius:10px;
+  box-sizing:border-box;
+  background:#fff;
+}
+
+.consult-grid textarea{
+  min-height:180px;
+  resize:vertical;
+}
+
+.cg-choice{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:16px;
+  font-weight:700;
+}
+
+.cg-choice input{
+  transform: scale(1.15);
+  accent-color: var(--green2);
+}
+
+.cg-subtitle{
+  font-size:14px;
+  font-weight:700;
+  margin-bottom:8px;
+  color:#2b2b2b;
+}
+
+.consult-actions{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.consult-actions button{
+  padding:10px 14px;
+  border-radius:10px;
+  border:1px solid var(--border);
+}
+
+/* 手機：改成單欄，閱讀更舒服 */
+@media (max-width: 900px){
+  .consult-grid{
+    grid-template-columns: 1fr;
+  }
+  .cg-label{
+    border-right:none;
+  }
+  .cg-span2{ grid-column: auto; }
+}
+
+  </style>
+</head>
+<body>
+  <header>
+    <div style="max-width:1100px;width:100%;display:flex;align-items:center;justify-content:space-between;">
+      <div>穩糖圈 go Health</div>
+      <button onclick="logout()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:.5em .8em;border-radius:8px;cursor:pointer;">
+        登出
+      </button>
+    </div>
+  </header>
+  
+
+  <div class="container">
+    <!-- 左側 -->
+    <div class="left">
+      <!-- ====== 主選單（下拉式） ====== -->
+      <nav class="side-menu" id="mainMenu">
+        <div class="menu-header" id="menuToggleBtn">
+          <span>≡ 展開功能選單</span>
+          <span class="arrow">▼</span>
+        </div>
+      
+        <div class="menu-links">
+          <a href="#ttmSummary"  data-target="ttmSummary" class="active">TTM 測驗</a>
+          <a href="#secVideo"    data-target="secVideo">衛教影片</a>
+          <a href="#secBiochem"  data-target="secBiochem">基本健康資料與檢驗報告</a>
+          <a href="#secGlucose"  data-target="secGlucose">血糖檢測專區</a>
+          <a href="#secMeds"     data-target="secMeds">用藥提醒</a>
+          <a href="#secReminders" data-target="secReminders">血糖監測與回診提醒</a>
+          <a href="#secConsult"  data-target="secConsult">專業諮詢</a>
+        </div>
+      </nav>
+      
+      
+
+      <!-- TTM 測驗摘要（去掉原本的 display:none；加 content-section 與固定 id） -->
+      <div class="section content-section" id="ttmSummary">
+        <h2>TTM 測驗結果</h2>
+      <!-- 分組結果不顯示（避免讓使用者知道自己是操作/控制組或A/B組） -->
+      <!-- <p id="ttmGroupText"></p> -->
+        <p id="ttmScoresText" class="muted"></p>
+      </div>
+
+
+      <!-- (二) 血糖記錄與即時回饋 -->
+      <div class="section content-section" id="secGlucose">
+        <h2>血糖記錄與即時回饋</h2>
+        <div class="row">
+          <div class="col">
+            <label for="glucose">血糖（mg/dL）</label>
+            <input type="number" id="glucose" placeholder="例如：105" min="0" />
+          </div>
+          <div class="col">
+            <label for="glucoseTime">量測時間</label>
+            <input type="datetime-local" id="glucoseTime" />
+          </div>
+        </div>
+
+        <div class="chips" id="glucoseLight">
+          <span class="chip gray">尚未輸入</span>
+        </div>
+        <div id="glucoseAdvice" class="hint" style="display:none;"></div>
+
+        <div class="row">
+          <div class="col">
+            <label for="careEmails">共同照護對象 Email（以逗號分隔）</label>
+            <input type="text" id="careEmails" placeholder="例如：nurse@hospital.org, dietitian@clinic.org"/>
+          </div>
+        </div>
+        <div class="controls">
+         <button id="saveGlucoseBtn">儲存血糖紀錄</button>
+         <button id="shareGlucoseBtn">分享最新血糖</button>
+         <button id="lineShareGlucoseBtn" style="background:#06C755;">LINE 分享</button>
+         <button id="clearGlucoseBtn" style="background:#9e9e9e;">清除所有紀錄</button>
+        </div>
+
+
+        <div class="list" id="glucoseHistory"></div>
+      </div>
+
+      <!-- (三) 基本健康資料與檢驗報告 -->
+<div class="section content-section" id="secBiochem">
+  <h2>基本健康資料與檢驗報告</h2>
+
+  <!-- 一、健康資料 -->
+  <h3 style="margin:.6em 0 .4em; color:#1B5E20;">一、健康資料</h3>
+  <div class="grid">
+    <div>
+      <label for="sex">性別</label>
+      <select id="sex">
+        <option value="male">男</option>
+        <option value="female">女</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="height">身高（cm）</label>
+      <input type="number" id="height" placeholder="例如：170"/>
+    </div>
+
+    <div>
+      <label for="weight">體重（kg）</label>
+      <input type="number" id="weight" placeholder="例如：70"/>
+    </div>
+
+    <div>
+      <label for="waist">腰圍（cm）</label>
+      <input type="number" id="waist" placeholder="例如：85"/>
+    </div>
+
+    <div>
+      <label for="hip">臀圍（cm）</label>
+      <input type="number" id="hip" placeholder="例如：96"/>
+    </div>
+  </div>
+
+  <!-- BMI：僅顯示數值 + 性別分級 -->
+  <div class="hint" id="bmiBox" style="margin-top:.8em;">
+    <div style="margin:.2em 0;">
+      BMI：<strong id="bmi_value">—</strong>
+      <span class="pill" id="bmi_tag">—</span>
+    </div>
+    <div class="muted" id="bmi_note">請輸入身高與體重以計算 BMI</div>
+  </div>
+
+  <!-- 建議熱量計算 -->
+  <div class="hint" style="margin-top:.8em;">
+    <h3 style="margin:.2em 0 .6em;color:#2E7D32">建議熱量計算</h3>
+    <div class="row">
+      <div class="col">
+        <label class="block-label">請依您日常活動狀況點選下列選項</label>
+        <div id="actGroup">
+          <label class="radio-item">
+            <input type="radio" name="act" value="bed" checked>
+            <span>臥床／極低</span>
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="act" value="light">
+            <span>輕度（散步、家務）</span>
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="act" value="moderate">
+            <span>中度（快走／騎車）</span>
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="act" value="heavy">
+            <span>重度（勞力／運動）</span>
+          </label>
+        </div>
+      </div>
+      <div class="col">
+        <p class="muted">將以<strong>目前體重</strong> × 活動量中值（kcal/kg）估算每日熱量。</p>
+      </div>
+    </div>
+    <div class="controls" style="margin-top:.4em;">
+      <button id="calcKcalBtn">計算建議熱量</button>
+    </div>
+    <div id="kcalResult" class="result"></div>
+  </div>
+
+  <hr style="border:none;border-top:1px solid var(--border); margin:1.2em 0;">
+
+  <!-- 二、檢驗數據 -->
+  <h3 style="margin:.2em 0 .4em; color:#1B5E20;">二、檢驗數據</h3>
+  <div class="grid">
+    <div>
+      <label for="creatinine">腎功能 Creatinine（mg/dL）</label>
+      <input type="number" id="creatinine" placeholder="例如：1.0" step="0.01"/>
+    </div>
+
+    <div>
+      <label for="BUN"> 尿素氮BUN（mg/dL）</label>
+      <input type="number" id="BUN" placeholder="例如：20"/>
+    </div>
+
+    <div>
+      <label for="urineProtein">尿蛋白UP（mg/dL 或試紙）</label>
+      <input type="text" id="urineProtein" placeholder="例如：陰性 / 30 mg/dL"/>
+    </div>
+
+    <div>
+      <label for="ast">天門冬胺酸轉胺酶AST（U/L）</label>
+      <input type="number" id="ast" placeholder="例如：22"/>
+    </div>
+
+    <div>
+      <label for="alt">丙胺酸轉胺酶ALT（U/L）</label>
+      <input type="number" id="alt" placeholder="例如：25"/>
+    </div>
+
+    <div>
+      <label for="hba1c">糖化血色素HbA1c（%）</label>
+      <input type="number" id="hba1c" placeholder="例如：6.8" step="0.1"/>
+    </div>
+
+    <div>
+      <label for="tc">總膽固醇TC（mg/dL）</label>
+      <input type="number" id="tc" placeholder="例如：190"/>
+    </div>
+
+    <div>
+      <label for="tg">三酸甘油脂TG（mg/dL）</label>
+      <input type="number" id="tg" placeholder="例如：120"/>
+    </div>
+
+    <div>
+      <label for="hdl">高密度脂蛋白HDL（mg/dL）</label>
+      <input type="number" id="hdl" placeholder="例如：45"/>
+    </div>
+
+    <div>
+      <label for="ldl">低密度脂蛋白LDL（mg/dL）</label>
+      <input type="number" id="ldl" placeholder="例如：110"/>
+    </div>
+  </div>
+
+  <div class="controls" style="margin-top:.6em;">
+    <button id="saveBiochemBtn">儲存生理/生化數值</button>
+    <button id="clearBiochemBtn" style="background:#9e9e9e;">清除已儲存的數值</button>
+  </div>
+  <div id="bioResult" class="result"></div>
+</div>
+
+<hr style="border:none;border-top:1px solid var(--border); margin:1.2em 0;">
+
+    <!-- (新增) 用藥提醒 -->
+    <div class="section content-section" id="secMeds">
+      <h2>用藥提醒</h2>
+      <p class="muted">
+        每一筆藥物都可以設定自己的用藥頻率與提醒時間。預設會在服藥時間 <strong>30 分鐘前</strong> 提醒，也可以自行調整。
+      </p>
+    
+      <!-- 口服藥清單 -->
+      <div class="hint">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:.8em;">
+          <div class="muted">口服藥清單：</div>
+          <button type="button" id="addOralRowBtn" style="background:#1976D2;">＋新增口服藥</button>
+        </div>
+        <div id="oralList" class="list" style="margin-top:.6em;"></div>
+      </div>
+    
+      <!-- 胰島素清單 -->
+      <div class="hint" style="margin-top:.8em;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:.8em;">
+          <div class="muted">胰島素清單：</div>
+          <button type="button" id="addInsRowBtn" style="background:#1976D2;">＋新增胰島素</button>
+        </div>
+        <div id="insList" class="list" style="margin-top:.6em;"></div>
+      </div>
+    
+      <div class="controls" style="margin-top:.8em;">
+        <button id="saveMedsBtn">儲存用藥提醒</button>
+        <button id="clearMedsBtn" style="background:#9e9e9e;">清除所有設定</button>
+      </div>
+      <div id="medsResult" class="result"></div>
+    </div>
+    
+
+    <!-- 右側 -->
+    <div class="right">
+      <!-- 衛教影片（計時） -->
+      <div class="section content-section" id="secVideo">
+        <h2>糖尿病衛教影片 <span class="pill" id="eduWatchTime">觀看 0:00</span></h2>
+        <div class="video-container" id="videoBox">
+          <iframe src="https://www.youtube.com/embed/11YbpsgPP1I"
+                  title="Diabetes Education" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen>
+          </iframe>
+        </div>
+        <p class="muted">系統會估計你在此區塊的停留時間作為「衛教觀看時間」。</p>
+      </div>
+
+      <!-- (四) 互動式留言板 & 預約諮詢 -->
+      <div class="section content-section" id="secConsult">
+        <h2>專業諮詢</h2>
+
+<div class="consult-grid" id="consultGrid">
+  <!-- row 1 -->
+  <div class="cg-label">預諮詢對象</div>
+  <div class="cg-field cg-span2">
+    <select id="role">
+      <option value="doctor">醫師</option>
+      <option value="nurse">護理師</option>
+      <option value="dietitian">營養師</option>
+      <option value="pharmacist">藥師</option>
+      <option value="research">研究團隊</option>
+    </select>
+  </div>
+
+  <!-- row 2 -->
+  <div class="cg-label">留言</div>
+  <div class="cg-field cg-span2">
+    <textarea id="consultMsg" rows="10" placeholder="請輸入想諮詢的內容…"></textarea>
+  </div>
+
+  <!-- row 3 -->
+  <div class="cg-label">預約諮詢</div>
+  <div class="cg-field">
+    <label class="cg-choice">
+      <input type="radio" name="reserveConsult" id="reserveYes" value="yes">
+      <span>需要</span>
+    </label>
+  </div>
+  <div class="cg-field">
+    <label class="cg-choice">
+      <input type="radio" name="reserveConsult" id="reserveNo" value="no" checked>
+      <span>不需要</span>
+    </label>
+  </div>
+
+<!-- row 4 (only show when "yes") -->
+<div class="cg-label" id="reserveLabel" style="display:none;">預約諮詢時段</div>
+<div class="cg-field" id="reserveFieldsL" style="display:none;">
+  <div class="cg-subtitle">日期</div>
+  <input type="date" id="consultDate">
+</div>
+<div class="cg-field" id="reserveFieldsR" style="display:none;">
+  <div class="cg-subtitle">時間（上午、下午、晚上）</div>
+  <select id="consultSlot">
+    <option value="">請選擇</option>
+    <option value="morning">上午</option>
+    <option value="noon">下午</option>
+    <option value="evening">晚上</option>
+  </select>
+</div>
+
+<!-- ✅ 保留舊的 consultTime（避免你原本 JS 讀取這個 id 會壞掉） -->
+<input type="hidden" id="consultTime" value="">
+
+<div class="consult-actions">
+  <button id="btnSendConsult">送出留言</button>
+   <!-- ✅ 新增：儲存預約 -->
+  <button id="btnSaveReserve" style="background:#1976D2;">儲存預約</button>
+  <button id="btnClearConsult">清空留言紀錄</button>
+
+</div>
+<!-- ✅ 新增：顯示儲存結果 -->
+<div id="reserveResult" class="result"></div>
+
+<div id="consultList">目前沒有留言</div>
+</div>  <!-- 關閉 .consult-grid -->
+</div>  <!-- ✅ 這行是補上的：關閉 #secConsult -->
+
+
+<!-- (五) 血糖監測與回診提醒（新增，修正：原本選單有但內容不存在） -->
+<div class="section content-section" id="secReminders">
+  <h2>血糖監測回診提醒</h2>
+  <p class="muted">每日提醒（請允許本站通知，以便在頁面開啟時提示）</p>
+
+  <div class="reminder-wrap">
+    <!-- 左：血糖監測提醒 -->
+    <div class="reminder-block">
+      <div class="reminder-title">一、血糖監測提醒</div>
+
+      <div class="reminder-fields">
+        <div class="field">
+          <label for="tPreMeal">早餐前</label>
+          <input type="time" id="tPreMeal" />
+        </div>
+
+        <div class="field">
+          <label for="tPostMeal">晚餐後</label>
+          <input type="time" id="tPostMeal" />
+        </div>
+
+        <div class="field" style="margin-bottom:0;">
+          <label for="tBedtime">睡前</label>
+          <input type="time" id="tBedtime" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 右：回診提醒 -->
+    <div class="reminder-block">
+      <div class="reminder-title">二、回診提醒</div>
+
+      <div class="reminder-fields">
+        <div class="field" style="margin-bottom:0;">
+          <label for="nextAppt">下次回診日期</label>
+          <input type="date" id="nextAppt" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls" style="margin-top:.9em;">
+    <button id="saveRemindersBtn">儲存提醒設定</button>
+    <button id="downloadICSBtn" style="background:#1976D2;">匯出回診行事曆（.ics）</button>
+  </div>
+
+  <div id="reminderResult" class="result"></div>
+</div>
+
+
+
+
+      <!-- (六) 使用時間統計（不進主選單，常駐顯示） -->
+      <div class="section">
+        <h2>使用紀錄 / 統計</h2>
+        <p>本次使用時長：<strong id="sessionTime">0:00</strong></p>
+        <p>累計使用時長：<strong id="totalTime">0:00</strong></p>
+        <p>互動次數：留言 <strong id="countMsg">0</strong> 次、血糖紀錄 <strong id="countGlu">0</strong> 次</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 區塊切換控制 (下拉選單版) ====== -->
+  <script>
+    const SECTION_IDS = ['ttmSummary','secBiochem','secGlucose','secReminders','secMeds','secConsult','secVideo'];
+  
+    const menuEl = document.getElementById('mainMenu');
+    const toggleBtn = document.getElementById('menuToggleBtn');
+  
+    // 取得網址的 Hash (#)
+    function validIdFromHash(hash){
+      const id = (hash||'').replace(/^#/, '');
+      return SECTION_IDS.includes(id) ? id : null;
+    }
+  
+    function showSection(id, updateHash = true){
+      if(!SECTION_IDS.includes(id)) id = 'ttmSummary';
+  
+      // 1. 隱藏/顯示區塊
+      SECTION_IDS.forEach(sid => {
+        const el = document.getElementById(sid);
+        if(!el) return;
+        el.classList.toggle('hidden', sid !== id);
+      });
+  
+      // 2. 選單高亮
+      document.querySelectorAll('#mainMenu .menu-links a').forEach(a => {
+        a.classList.toggle('active', a.dataset.target === id);
+        // 如果是當前選取的，把下拉按鈕的文字改成該選項
+        if (a.dataset.target === id) {
+          toggleBtn.querySelector('span:first-child').textContent = `≡ 目前區塊：${a.textContent}`;
+        }
+      });
+  
+      // 3. 更新網址
+      if(updateHash){
+        const newHash = '#' + id;
+        if(location.hash !== newHash){
+          history.replaceState(null, '', newHash);
+        }
+      }
+  
+      // 4. 收起下拉選單 & 捲動到頂部
+      menuEl.classList.remove('open');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  
+    document.addEventListener('DOMContentLoaded', () => {
+      // 點擊「展開選單」按鈕
+      if(toggleBtn){
+        toggleBtn.addEventListener('click', () => {
+          menuEl.classList.toggle('open');
+        });
+      }
+  
+      // 點擊選單內的選項
+      document.querySelectorAll('#mainMenu .menu-links a[data-target]').forEach(a => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          showSection(a.dataset.target, true);
+        });
+      });
+  
+      // 點擊畫面其他地方自動收起選單
+      document.addEventListener('click', (e) => {
+        if (!menuEl.contains(e.target)) {
+          menuEl.classList.remove('open');
+        }
+      });
+  
+      // 初始載入
+      const fromHash = validIdFromHash(location.hash);
+      showSection(fromHash || 'ttmSummary', !fromHash);
+    });
+  
+    // 監聽上一頁/下一頁
+    window.addEventListener('hashchange', () => {
+      const id = validIdFromHash(location.hash) || 'ttmSummary';
+      showSection(id, false);
+    });
+  </script>  
+
+<script src="assets/auth.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => requireLogin(true));
+</script>
+
+<script>
+  window.addEventListener('load', function () {
+    // 確保載入完成後，捲回頁面頂端
+    window.scrollTo(0, 0);
+  });
+</script>
+
+
+
+  <script>
+    /* ================ 工具 ================ */
+    const $ = (id)=>document.getElementById(id);
+    const fmt2 = (n)=> n.toString().padStart(2,'0');
+    function mmss(sec){
+      sec = Math.max(0, Math.floor(sec));
+      const m = Math.floor(sec/60), s = sec%60;
+      return `${m}:${fmt2(s)}`
+    }
+    function nowISO(){ return new Date().toISOString(); }
+
+    /* ================ 讀取 TTM 摘要（不顯示分組，只顯示各題分數） ================ */
+   (function loadTTM(){
+  try{
+    const scores = JSON.parse(localStorage.getItem('ttmScores')||'null');
+
+    // 不顯示分組結果（避免暴露操作/控制組或A/B組）
+    const groupEl = $('ttmGroupText');
+    if (groupEl) groupEl.textContent = '';   // 或改成 'TTM 測驗結果如下：'
+
+    if (scores && Array.isArray(scores) && scores.length){
+      $('ttmScoresText').textContent = `各題分數：${scores.join('、')}`;
+    }else{
+      $('ttmScoresText').textContent = '尚未有 TTM 測驗結果';
+    }
+  }catch(e){}
+   })();
+
+
+    /* ================ (二) 血糖即時回饋與紀錄 ================ */
+    
+    // 設定 API 網址 (請確保這跟你的 Node.js server.js 裡面的 PORT 是一樣的)
+    const API_BASE = 'https://gohealth-backend.vercel.app/api'; 
+    const currentUserId = localStorage.getItem('currentEmail') || 'guest@example.com';
+    
+    // 建立一個變數來暫存從資料庫抓回來的紀錄，給「分享」按鈕使用
+    let currentGlucoseLogs = []; 
+
+    function evalGlucose(v){
+      if (v === null || isNaN(v)) return {cls:'gray', label:'尚未輸入', advice:''};
+      if (v < 50 || v >= 400) {
+        return {cls:'red', label:'紅燈', advice:'異常血糖（<50 或 ≥400 mg/dL）。請立即依低/高血糖處置，並聯絡醫療團隊！'};
+      } else if (v >= 50 && v <= 69) {
+        return {cls:'blue', label:'藍燈', advice:'請檢視是否有低血糖症狀，先立即進食；若反覆發生，請儘速回診檢視用藥劑量。'};
+      } else if (v >= 70 && v <= 140) {
+        return {cls:'green', label:'綠燈', advice:'做得好！屬於建議範圍，請持續維持飲食與運動習慣。'};
+      } else if (v >= 141 && v <= 399) {
+        return {cls:'yellow', label:'黃燈', advice:'血糖偏高，請遵從醫囑用藥，並檢視飲食與運動習慣，如持續偏高請回診。'};
+      }
+      return {cls:'gray', label:'--', advice:''};
+    }
+
+    function renderGlucoseLight(v){
+      const info = evalGlucose(v);
+      $('glucoseLight').innerHTML = `<span class="chip ${info.cls}">${info.label}</span>`;
+      const ad = $('glucoseAdvice');
+      if(info.advice){
+        ad.style.display='block';
+        ad.textContent = info.advice;
+      }else{
+        ad.style.display='none';
+        ad.textContent = '';
+      }
+    }
+
+    $('glucose').addEventListener('input', e=>{
+      const val = Number(e.target.value);
+      renderGlucoseLight(isNaN(val)? null: val);
+    });
+
+    // 1. 讀取 (從 MongoDB 抓取資料)
+    async function loadGlucoseHistory(){
+      const box = $('glucoseHistory');
+      box.innerHTML = `<div class="list-item"><span class="meta">載入中...</span></div>`;
+      
+      try {
+        const response = await fetch(`${API_BASE}/glucose/${currentUserId}`);
+        const result = await response.json();
+        
+        currentGlucoseLogs = result.data || []; // 更新暫存，供分享使用
+
+        if(currentGlucoseLogs.length === 0){
+          box.innerHTML = `<div class="list-item"><span class="meta">目前沒有紀錄</span></div>`;
+          return;
+        }
+
+        // 渲染畫面 (注意 MongoDB 的 _id，時間是 measuredAt)
+        box.innerHTML = currentGlucoseLogs.map(item => {
+          const tag = evalGlucose(item.value);
+          return `
+            <div class="list-item">
+              <div>
+                <div><strong>${item.value} mg/dL</strong> <span class="badge ${tag.cls}">${tag.label}</span></div>
+                <div class="meta">${new Date(item.measuredAt).toLocaleString()}${item.note? ' · '+item.note : ''}</div>
+              </div>
+              <div class="controls">
+                <button data-id="${item._id}" class="btnShareRow">分享</button>
+                <button data-id="${item._id}" class="btnDelRow" style="background:#9e9e9e;">刪除</button>
+              </div>
+            </div>`;
+        }).join('');
+
+        // 綁定分享與刪除按鈕
+        box.querySelectorAll('.btnShareRow').forEach(b => {
+          b.onclick = () => shareGlucoseById(b.getAttribute('data-id'));
+        });
+        box.querySelectorAll('.btnDelRow').forEach(b => {
+          b.onclick = () => deleteGlucoseById(b.getAttribute('data-id'));
+        });
+      } catch (error) {
+        console.error(error);
+        box.innerHTML = `<div class="list-item"><span class="meta" style="color:red;">載入失敗，請確認後端 Node.js 是否有開啟</span></div>`;
+      }
+    }
+
+    // 2. 儲存 (新增到 MongoDB)
+    async function saveGlucose(){
+      const v = Number($('glucose').value);
+      if(isNaN(v)){ toast('請輸入血糖數值','err'); return; }
+      const t = $('glucoseTime').value ? new Date($('glucoseTime').value) : new Date();
+
+      const payload = {
+        userId: currentUserId,
+        value: v,
+        measuredAt: t.toISOString()
+      };
+
+      try {
+        const response = await fetch(`${API_BASE}/glucose`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if(response.ok) {
+          toast('血糖紀錄已儲存至雲端','ok');
+          $('glucose').value = ''; 
+          $('glucoseTime').value = ''; 
+          loadGlucoseHistory();    // 重新從資料庫抓取更新
+          renderGlucoseLight(null);
+        } else {
+          toast('儲存失敗','err');
+        }
+      } catch(error) {
+        toast('網路錯誤，請確認後端是否開啟','err');
+      }
+    }
+
+    // 3. 刪除 (透過 API 刪除 MongoDB 的資料)
+    async function deleteGlucoseById(id){
+      if(!confirm('確定要刪除這筆紀錄嗎？')) return;
+      try {
+        const response = await fetch(`${API_BASE}/glucose/${id}`, { method: 'DELETE' });
+        if(response.ok){
+          toast('已刪除','ok');
+          loadGlucoseHistory();
+        }
+      } catch(error) {
+        toast('刪除失敗','err');
+      }
+    }
+
+    // 4. 清除所有 (逐一呼叫 API 刪除)
+    async function clearGlucose(){
+      if(!confirm('確定要清除所有血糖紀錄？(此操作無法復原)')) return;
+      try {
+        for (const item of currentGlucoseLogs) {
+          await fetch(`${API_BASE}/glucose/${item._id}`, { method: 'DELETE' });
+        }
+        toast('已清除所有紀錄', 'ok');
+        loadGlucoseHistory();
+      } catch(error) {
+        toast('清除時發生錯誤', 'err');
+      }
+    }
+
+    /* --- 分享功能模組 (改從 currentGlucoseLogs 讀取) --- */
+    async function shareText(subject, text){
+      try{
+        if(navigator.share){
+          await navigator.share({title:subject, text});
+        }else{
+          window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+        }
+      }catch(e){}
+    }
+
+    function buildGlucoseShareText(item){
+      const tag = evalGlucose(item.value);
+      return `血糖更新：${item.value} mg/dL（${tag.label}）\n量測時間：${new Date(item.measuredAt).toLocaleString()}\n回饋建議：${tag.advice}\n\n（此訊息由個案於自我管理平台分享）`;
+    }
+
+    async function copyToClipboard(text){
+      try{
+        await navigator.clipboard.writeText(text);
+        return true;
+      }catch(e){
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+        return true;
+      }
+    }
+
+    function isMobileDevice(){
+      return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    }
+
+    // 分享最新一筆
+    function shareGlucoseLatest(){
+      if(currentGlucoseLogs.length===0){ toast('目前沒有可分享的血糖紀錄','err'); return; }
+      const latest = currentGlucoseLogs[0];
+      const tag = evalGlucose(latest.value);
+      const emails = $('careEmails').value || '';
+      const subject = `血糖更新：${latest.value} mg/dL（${tag.label}）`;
+      const body = `最新血糖：${latest.value} mg/dL（${tag.label}）\n量測時間：${new Date(latest.measuredAt).toLocaleString()}\n回饋建議：${tag.advice}\n\n（此訊息由個案於自我管理平台分享）`;
+      
+      if (emails.trim()){
+        window.location.href = `mailto:${encodeURIComponent(emails)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      } else {
+        shareText(subject, body);
+      }
+    }
+
+    // LINE 分享最新一筆
+    async function shareLatestToLINE(){
+      if(currentGlucoseLogs.length===0){ toast('目前沒有可分享的血糖紀錄','err'); return; }
+      const text = buildGlucoseShareText(currentGlucoseLogs[0]);
+
+      if(isMobileDevice()){
+        window.location.href = `line://msg/text/${encodeURIComponent(text)}`;
+      } else {
+        await copyToClipboard(text);
+        alert('已複製血糖分享文字，請打開 LINE 後貼上即可分享。');
+      }
+    }
+
+    // 分享指定一筆
+    function shareGlucoseById(id){
+      const item = currentGlucoseLogs.find(x => x._id === id);
+      if(!item){ toast('找不到該筆紀錄','err'); return; }
+      const tag = evalGlucose(item.value);
+      const emails = $('careEmails').value || '';
+      const subject = `血糖更新：${item.value} mg/dL（${tag.label}）`;
+      const body = `血糖：${item.value} mg/dL（${tag.label}）\n量測時間：${new Date(item.measuredAt).toLocaleString()}\n回饋建議：${tag.advice}`;
+      
+      if (emails.trim()){
+        window.location.href = `mailto:${encodeURIComponent(emails)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      } else {
+        shareText(subject, body);
+      }
+    }
+
+    // 綁定按鈕事件
+    $('saveGlucoseBtn').onclick = saveGlucose;
+    $('shareGlucoseBtn').onclick = shareGlucoseLatest;
+    $('clearGlucoseBtn').onclick = clearGlucose;
+    $('lineShareGlucoseBtn').onclick = shareLatestToLINE;
+
+    // 網頁載入時立刻讀取資料
+    loadGlucoseHistory();
+    renderGlucoseLight(null);
+    
+    /* ================ (二) 結束 ================ */  
+  /* ================ (三) 生理/生化：保存與清除 (API 整合版) ================ */
+  async function loadBiochem() {
+    try {
+      const res = await fetch(`${API_BASE}/biochem/${currentUserId}`);
+      const json = await res.json();
+      if (json.data && Object.keys(json.data).length > 0) {
+        const d = json.data;
+        $('sex').value = d.sex || 'male';
+        $('height').value = d.height || ''; $('weight').value = d.weight || '';
+        $('waist').value = d.waist || ''; $('hip').value = d.hip || '';
+        $('creatinine').value = d.creatinine || ''; $('BUN').value = d.BUN || '';
+        $('urineProtein').value = d.urineProtein || ''; $('ast').value = d.ast || '';
+        $('alt').value = d.alt || ''; $('hba1c').value = d.hba1c || '';
+        $('tc').value = d.tc || ''; $('tg').value = d.tg || '';
+        $('hdl').value = d.hdl || ''; $('ldl').value = d.ldl || '';
+        refreshBMIOnly(); // 載入後刷新 BMI
+      }
+    } catch (e) { console.error('無法載入生理數據'); }
+  }
+
+  async function saveBiochem(){
+    const payload = {
+      userId: currentUserId,
+      sex: $('sex').value,
+      height:$('height').value, weight:$('weight').value, waist:$('waist').value, hip:$('hip').value,
+      creatinine:$('creatinine').value, BUN:$('BUN').value, urineProtein:$('urineProtein').value,
+      ast:$('ast').value, alt:$('alt').value, hba1c:$('hba1c').value,
+      tc:$('tc').value, tg:$('tg').value, hdl:$('hdl').value, ldl:$('ldl').value
+    };
+    try {
+      await fetch(`${API_BASE}/biochem`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      });
+      $('bioResult').textContent='已儲存。'; $('bioResult').className='result ok';
+      refreshBMIOnly(); toast('生理數值已儲存','ok');
+    } catch(e) { toast('儲存失敗', 'err'); }
+  }
+
+  async function clearBiochem(){
+    if(!confirm('確定清除已儲存的數值？')) return;
+    try {
+      await fetch(`${API_BASE}/biochem/${currentUserId}`, { method: 'DELETE' });
+      // 清空所有 input
+      document.querySelectorAll('#secBiochem input').forEach(el => el.value = '');
+      $('bioResult').textContent='已清除已儲存的數值。'; $('bioResult').className='result';
+      refreshBMIOnly(); toast('已清除', 'ok');
+    } catch(e) { toast('清除失敗', 'err'); }
+  }
+
+  $('saveBiochemBtn').onclick = saveBiochem;
+  $('clearBiochemBtn').onclick = clearBiochem;
+  loadBiochem(); // 網頁載入時讀取一次
+
+/* ====== BMI：只顯示數值 + 依性別分級 ====== */
+function toNum(v){ const n = Number(v); return isNaN(n) ? null : n; }
+
+function computeBMI(hCm, wKg){
+  if(!hCm || !wKg) return null;
+  const m = hCm / 100;
+  if(m <= 0) return null;
+  return wKg / (m * m);
+}
+
+// 目前男女同一套門檻（衛福部成人 BMI 分類）；若要男女不同，改這裡即可
+const BMI_RULES = {
+  male: [
+    { max: 18.5,      label: '體重過輕', cls: 'pill' },
+    { max: 24,        label: '正常',     cls: 'pill' },
+    { max: 27,        label: '過重',     cls: 'pill' },
+    { max: Infinity,  label: '肥胖',     cls: 'pill' },
+  ],
+  female: [
+    { max: 18.5,      label: '體重過輕', cls: 'pill' },
+    { max: 24,        label: '正常',     cls: 'pill' },
+    { max: 27,        label: '過重',     cls: 'pill' },
+    { max: Infinity,  label: '肥胖',     cls: 'pill' },
+  ],
+};
+
+function bmiStatusBySex(sex, bmi){
+  const rules = BMI_RULES[sex] || BMI_RULES.male;
+  for(const r of rules){
+    if(bmi < r.max) return { label: r.label, cls: r.cls };
+  }
+  return { label: '—', cls: 'pill' };
+}
+
+function round1(x){ return Math.round(x * 10) / 10; }
+
+function refreshBMIOnly(){
+  const sex = (document.getElementById('sex')?.value) || 'male';
+  const h = toNum(document.getElementById('height')?.value);
+  const w = toNum(document.getElementById('weight')?.value);
+
+  const bmi = computeBMI(h, w);
+  const elVal  = document.getElementById('bmi_value');
+  const elTag  = document.getElementById('bmi_tag');
+  const elNote = document.getElementById('bmi_note');
+
+  if(bmi == null){
+    elVal.textContent = '—';
+    elTag.textContent = '—';
+    elNote.textContent = '請輸入身高與體重以計算 BMI';
+    return;
+  }
+
+  const stat = bmiStatusBySex(sex, bmi);
+  elVal.textContent = round1(bmi);
+  elTag.textContent = stat.label;
+  elNote.textContent = '分級依衛福部成人 BMI 標準';
+}
+
+// 身高/體重/性別改動即時更新
+['sex','height','weight'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', refreshBMIOnly);
+});
+
+// 初次載入刷新一次
+refreshBMIOnly();
+
+
+/* ====== 熱量估算：改用「目前體重 × 活動量中值」====== */
+function kcalPerKgSimple(activity){
+  // 中值估算：臥床23、輕度27、中度32、重度37（kcal/kg）
+  const map = { bed:23, light:27, moderate:32, heavy:37 };
+  return map[activity] || 27;
+}
+
+function calcKcal(){
+  const w = Number(document.getElementById('weight')?.value);
+  if(!w){
+    const box = document.getElementById('kcalResult');
+    box.className = 'result err';
+    box.textContent = '請先輸入體重';
+    return;
+  }
+  const act = (document.querySelector('input[name="act"]:checked')||{}).value || 'light';
+  const perKg = kcalPerKgSimple(act);
+  const kcal = Math.round(perKg * w);
+
+  const box = document.getElementById('kcalResult');
+  box.className = 'result';
+  box.innerHTML =
+    `建議熱量：<strong>${kcal}</strong> 大卡/天　` +
+    `<span class="muted">（每公斤體重 <strong>${perKg}</strong> 大卡 × 體重 <strong>${w}</strong> kg）</span>`;
+}
+
+/* 綁定按鈕（僅保留計算建議熱量） */
+document.getElementById('calcKcalBtn').addEventListener('click', calcKcal);
+
+/* 刪除以下舊函式與監聽（已不需要）：
+   - toNum / round1 / computeBMI / computeIdealWeights / bmiTag / autoWtStatus
+   - kcalPerKg（舊版）
+   - refreshIdeal
+   - document.getElementById('calcIdealBtn').addEventListener('click', refreshIdeal);
+   - ['sex','height','weight'] 的 change 監聽
+   - refreshIdeal();
+*/
+
+
+/* ============ (五) 血糖監測/回診提醒 (API 整合版) ============ */
+async function loadReminders(){
+  try{
+    const res = await fetch(`${API_BASE}/reminders/${currentUserId}`);
+    const json = await res.json();
+    if(json.data) {
+      document.getElementById('tPreMeal').value  = json.data.tPreMeal  || '';
+      document.getElementById('tPostMeal').value = json.data.tPostMeal || '';
+      document.getElementById('tBedtime').value  = json.data.tBedtime  || '';
+      document.getElementById('nextAppt').value  = json.data.nextAppt  || '';
+    }
+  }catch(e){}
+}
+
+async function saveReminders(){
+  const payload = {
+    userId: currentUserId,
+    tPreMeal:  document.getElementById('tPreMeal').value || '',
+    tPostMeal: document.getElementById('tPostMeal').value || '',
+    tBedtime:  document.getElementById('tBedtime').value || '',
+    nextAppt:  document.getElementById('nextAppt').value || ''
+  };
+  try {
+    await fetch(`${API_BASE}/reminders`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const box = document.getElementById('reminderResult');
+    if(box){ box.textContent = '已儲存提醒設定。'; box.className = 'result ok'; }
+    toast('已儲存提醒設定','ok');
+  } catch(e) { toast('儲存失敗', 'err'); }
+}
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+function icsDateTimeLocal(d){
+  // 產生 YYYYMMDDTHHMM00（floating time，不加 Z）
+  return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+}
+
+function nextOccurrenceForTime(hhmm){
+  // 以「下一次會發生」的日期時間作為 DTSTART
+  const [hh, mm] = (hhmm || '00:00').split(':').map(x=>parseInt(x,10));
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh||0, mm||0, 0);
+  if(d.getTime() <= now.getTime()){
+    d.setDate(d.getDate()+1);
+  }
+  return d;
+}
+
+function buildICS(rem){
+  const lines = [];
+  const now = new Date();
+  const dtstamp = icsDateTimeLocal(now);
+  const uidBase = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
+
+  lines.push('BEGIN:VCALENDAR');
+  lines.push('VERSION:2.0');
+  lines.push('PRODID:-//go Health//Reminders//ZH-TW');
+  lines.push('CALSCALE:GREGORIAN');
+  lines.push('METHOD:PUBLISH');
+
+  // 三個每日提醒（有填才輸出）
+  const dailyItems = [
+    { key:'tPreMeal',  title:'血糖提醒：早餐前量測', time: rem.tPreMeal },
+    { key:'tPostMeal', title:'血糖提醒：晚餐後量測', time: rem.tPostMeal },
+    { key:'tBedtime',  title:'血糖提醒：睡前量測',   time: rem.tBedtime },
+  ];
+
+  dailyItems.forEach((it, idx)=>{
+    if(!it.time) return;
+    const start = nextOccurrenceForTime(it.time);
+    lines.push('BEGIN:VEVENT');
+    lines.push(`UID:${uidBase}-glu-${idx}@gohealth`);
+    lines.push(`DTSTAMP:${dtstamp}`);
+    lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
+    lines.push(`RRULE:FREQ=DAILY`);
+    lines.push(`SUMMARY:${it.title}`);
+    lines.push('DESCRIPTION:由「穩糖圈 go Health」匯出的每日提醒');
+    lines.push('END:VEVENT');
+  });
+
+  // 回診事件（有填才輸出）
+  if(rem.nextAppt){
+    const [Y,M,D] = rem.nextAppt.split('-').map(x=>parseInt(x,10));
+    // 預設 09:00（你也可改 10:00）
+    const appt = new Date(Y, (M||1)-1, D||1, 9, 0, 0);
+    lines.push('BEGIN:VEVENT');
+    lines.push(`UID:${uidBase}-appt@gohealth`);
+    lines.push(`DTSTAMP:${dtstamp}`);
+    lines.push(`DTSTART:${icsDateTimeLocal(appt)}`);
+    lines.push(`DTEND:${icsDateTimeLocal(new Date(appt.getTime()+30*60*1000))}`);
+    lines.push('SUMMARY:回診提醒（糖尿病追蹤）');
+    lines.push('DESCRIPTION:由「穩糖圈 go Health」匯出的回診事件');
+    lines.push('END:VEVENT');
+  }
+
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+
+function downloadICS(){
+  // 直接讀取畫面上輸入框裡的時間與日期
+  const rem = {
+    tPreMeal: document.getElementById('tPreMeal').value || '',
+    tPostMeal: document.getElementById('tPostMeal').value || '',
+    tBedtime: document.getElementById('tBedtime').value || '',
+    nextAppt: document.getElementById('nextAppt').value || '',
+  };
+
+  const hasAny = rem.tPreMeal || rem.tPostMeal || rem.tBedtime || rem.nextAppt;
+  if(!hasAny){
+    toast('請至少填一個提醒時間或回診日期再匯出','err');
+    return;
+  }
+
+  const ics = buildICS(rem);
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'gohealth-reminders.ics';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  toast('已匯出行事曆檔案 (.ics)','ok');
+}
+/* 綁定提醒按鈕 */
+document.getElementById('saveRemindersBtn')?.addEventListener('click', saveReminders);
+document.getElementById('downloadICSBtn')?.addEventListener('click', downloadICS);
+loadReminders();
+
+
+/* ============ 專業諮詢：只有「需要」才顯示預約欄位，並同步到 #consultTime ============ */
+function slotToTime(slot){
+  // 你可以依需求調整時段對應時間
+  const map = { morning:'09:00', noon:'14:00', evening:'19:00' };
+  return map[slot] || '';
+}
+
+function syncConsultTime(){
+  const yes = document.getElementById('reserveYes')?.checked;
+  const hidden = document.getElementById('consultTime');
+  if(!hidden) return;
+
+  if(!yes){
+    hidden.value = '';
+    return;
+  }
+
+  const d = document.getElementById('consultDate')?.value || '';
+  const s = document.getElementById('consultSlot')?.value || '';
+  const t = slotToTime(s);
+
+  if(d && t){
+    // 產生 ISO（例如 2025-12-24T09:00:00.000Z 會有時區問題）
+    // 這裡用「本地浮動時間」拼字串，再 new Date 轉 ISO（仍可被正確顯示）
+    const localStr = `${d}T${t}:00`;
+    const iso = new Date(localStr).toISOString();
+    hidden.value = iso;
+  }else{
+    hidden.value = '';
+  }
+}
+
+function setReserveUI(show){
+  const L = document.getElementById('reserveFieldsL');
+  const R = document.getElementById('reserveFieldsR');
+  const Lab = document.getElementById('reserveLabel');
+
+  if(L) L.style.display = show ? '' : 'none';
+  if(R) R.style.display = show ? '' : 'none';
+  if(Lab) Lab.style.display = show ? '' : 'none';
+
+  if(!show){
+    document.getElementById('consultDate') && (document.getElementById('consultDate').value = '');
+    document.getElementById('consultSlot') && (document.getElementById('consultSlot').value = '');
+    syncConsultTime();
+  }
+}
+
+function initConsultPanel(){
+  const yes = document.getElementById('reserveYes');
+  const no  = document.getElementById('reserveNo');
+  const date = document.getElementById('consultDate');
+  const slot = document.getElementById('consultSlot');
+
+  if(yes) yes.addEventListener('change', ()=>{ if(yes.checked){ setReserveUI(true); syncConsultTime(); } });
+  if(no)  no.addEventListener('change',  ()=>{ if(no.checked){ setReserveUI(false); } });
+
+  if(date) date.addEventListener('change', syncConsultTime);
+  if(slot) slot.addEventListener('change', syncConsultTime);
+
+  // 初始狀態
+  setReserveUI(!!yes?.checked);
+  syncConsultTime();
+}
+
+initConsultPanel();
+
+/* ============ 預約諮詢與留言板 (API 整合版) ============ */
+async function saveReserve(){
+  const yes = document.getElementById('reserveYes')?.checked;
+  const date = document.getElementById('consultDate')?.value || '';
+  const slot = document.getElementById('consultSlot')?.value || '';
+  const consultTime = document.getElementById('consultTime')?.value || '';
+
+  if(yes && (!date || !slot)){
+    showReserveResult('請先選擇日期與時段再儲存預約。', false); toast('請先選擇日期與時段', 'err'); return;
+  }
+  const payload = { userId: currentUserId, need: !!yes, date, slot, consultTime };
+  try {
+    await fetch(`${API_BASE}/reservation`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    showReserveResult(yes ? '已儲存預約諮詢。' : '已儲存：不需要預約。', true); toast('預約設定已儲存', 'ok');
+  } catch(e) { toast('儲存失敗', 'err'); }
+}
+
+async function loadReserve(){
+  try{ 
+    const res = await fetch(`${API_BASE}/reservation/${currentUserId}`);
+    const json = await res.json();
+    const r = json.data;
+    if(!r) return;
+    if(r.need){
+      if(document.getElementById('reserveYes')) document.getElementById('reserveYes').checked = true;
+      setReserveUI(true);
+    } else {
+      if(document.getElementById('reserveNo')) document.getElementById('reserveNo').checked = true;
+      setReserveUI(false);
+    }
+    if(document.getElementById('consultDate')) document.getElementById('consultDate').value = r.date || '';
+    if(document.getElementById('consultSlot')) document.getElementById('consultSlot').value = r.slot || '';
+    syncConsultTime();
+  }catch(e){ }
+}
+document.getElementById('btnSaveReserve')?.addEventListener('click', saveReserve);
+loadReserve();
+
+/* --- 留言板區塊 --- */
+function roleLabel(v){
+  const map = { doctor:'醫師', nurse:'護理師', dietitian:'營養師', pharmacist:'藥師', research:'研究團隊' };
+  return map[v] || v || '';
+}
+
+async function renderConsultList(){
+  const box = document.getElementById('consultList');
+  if(!box) return;
+  try {
+    const res = await fetch(`${API_BASE}/consults/${currentUserId}`);
+    const json = await res.json();
+    const list = json.data || [];
+    if(list.length === 0){ box.textContent = '目前沒有留言'; return; }
+
+    box.innerHTML = list.map(item => `
+      <div class="list-item">
+        <div>
+          <div><strong>${roleLabel(item.role)}</strong></div>
+          <div class="meta">${new Date(item.createdAt).toLocaleString()} ${item.consultTime ? '· 預約：'+new Date(item.consultTime).toLocaleString() : ''}</div>
+          <div style="margin-top:6px;">${item.message}</div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { box.textContent = '無法讀取留言'; }
+}
+
+async function sendConsult(){
+  const role = document.getElementById('role')?.value || 'patient';
+  const message = document.getElementById('consultMsg')?.value.trim() || '';
+  const consultTime = document.getElementById('consultTime')?.value || ''; 
+  if(!message){ toast('請先輸入留言內容', 'err'); return; }
+
+  try {
+    await fetch(`${API_BASE}/consults`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUserId, role, message, consultTime })
+    });
+    document.getElementById('consultMsg').value = '';
+    renderConsultList(); toast('留言已送出', 'ok');
+  } catch(e) { toast('送出失敗', 'err'); }
+}
+
+async function clearConsult(){
+  if(!confirm('確定要清空所有留言紀錄？')) return;
+  try {
+    await fetch(`${API_BASE}/consults/${currentUserId}`, { method: 'DELETE' });
+    renderConsultList(); toast('已清空留言紀錄', 'ok');
+  } catch(e) { toast('清空失敗', 'err'); }
+}
+
+document.getElementById('btnSendConsult')?.addEventListener('click', sendConsult);
+document.getElementById('btnClearConsult')?.addEventListener('click', clearConsult);
+renderConsultList();
+
+
+ /* ================ (新版) 用藥提醒：每藥品獨立頻率＋提前 X 分鐘提醒 ================ */
+
+const MEDS_V2_KEY = 'medicationReminderV2';
+
+// 頻率選項：沿用你原本的概念
+const MED_FREQ_OPTIONS = [
+  { value: 'preB',      label: '早餐飯前',      defaultTime: '07:30' },
+  { value: 'postB',     label: '早餐飯後',      defaultTime: '08:00' },
+  { value: 'pre3',      label: '三餐飯前',      defaultTime: '07:30' },  // 只用其中一個時間做提醒起點
+  { value: 'post3',     label: '三餐飯後',      defaultTime: '08:00' },
+  { value: 'pre3+bed',  label: '三餐飯前＋睡前', defaultTime: '07:30' },
+  { value: 'post3+bed', label: '三餐飯後＋睡前', defaultTime: '08:00' },
+];
+
+// 頻率文字，用在通知內容
+const MED_FREQ_LABEL = MED_FREQ_OPTIONS.reduce((acc, x) => {
+  acc[x.value] = x.label;
+  return acc;
+}, {});
+
+// 取得某個頻率的預設時間
+function defaultTimeForFreq(freq) {
+  const found = MED_FREQ_OPTIONS.find(f => f.value === freq);
+  return (found && found.defaultTime) || '08:00';
+}
+
+// hh:mm 字串 - N 分鐘，回傳新的 hh:mm（24 小時制）
+function timeMinusMinutes(hhmm, mins) {
+  if (!hhmm || !/^\d{2}:\d{2}$/.test(hhmm)) return hhmm || '';
+  const [hStr, mStr] = hhmm.split(':');
+  let total = parseInt(hStr, 10) * 60 + parseInt(mStr, 10) - (mins || 0);
+  const DAY = 24 * 60;
+  total = ((total % DAY) + DAY) % DAY; // 確保在 0~1439
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${fmt2(h)}:${fmt2(m)}`;
+}
+
+// 建立一個用藥 row 的 DOM（type: 'oral' | 'ins'）
+function createMedRow(type, data = {}) {
+  const row = document.createElement('div');
+  row.className = 'list-item med-row';
+  row.dataset.type = type;
+  row.dataset.id = data.id || crypto.randomUUID();
+
+  const name = data.name || '';
+  const dose = data.dose || '';
+  const freq = data.freq || 'preB';
+  const time = data.time || defaultTimeForFreq(freq);
+  const enableRemind = data.enableRemind !== false;  // 預設 true
+  const leadMinutes = (typeof data.leadMinutes === 'number') ? data.leadMinutes : 30;
+
+  row.innerHTML = `
+    <div style="flex:1;min-width:0;">
+      <div class="row" style="margin-bottom:.4em;gap:.6em;">
+        <div class="col">
+          <label style="display:block;margin-bottom:.2em;">藥品名稱</label>
+          <input type="text" class="med-name" placeholder="${type === 'oral' ? '例如：Metformin' : '例如：Glargine'}" value="${name}">
+        </div>
+        <div class="col">
+          <label style="display:block;margin-bottom:.2em;">劑量 / 用法</label>
+          <input type="text" class="med-dose" placeholder="${type === 'oral' ? '例如：500 mg 1# bid' : '例如：10 單位'}" value="${dose}">
+        </div>
+      </div>
+
+      <div class="row" style="margin-bottom:.4em;gap:.6em;align-items:center;">
+        <div class="col">
+          <label style="display:block;margin-bottom:.2em;">用藥頻率</label>
+          <select class="med-freq">
+            ${MED_FREQ_OPTIONS.map(opt => `
+              <option value="${opt.value}" ${opt.value === freq ? 'selected' : ''}>
+                ${opt.label}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+        <div class="col">
+          <label style="display:block;margin-bottom:.2em;">服藥時間</label>
+          <input type="time" class="med-time" value="${time}">
+        </div>
+      </div>
+
+      <div class="row" style="align-items:center;gap:.6em;">
+        <label style="display:flex;align-items:center;gap:.3em;">
+          <input type="checkbox" class="med-enable" ${enableRemind ? 'checked' : ''}>
+          需要提醒
+        </label>
+        <div>
+          提前
+          <input type="number" class="med-lead" min="0" max="240" step="5" style="width:70px;" value="${leadMinutes}">
+          分鐘提醒
+        </div>
+      </div>
+    </div>
+    <div>
+      <button type="button" class="btnDelMed" style="background:#9e9e9e;">刪除</button>
+    </div>
+  `;
+
+  // 頻率改變時，如果時間欄是空的，帶入預設時間
+  const freqSelect = row.querySelector('.med-freq');
+  const timeInput = row.querySelector('.med-time');
+  freqSelect.addEventListener('change', () => {
+    if (!timeInput.value) {
+      timeInput.value = defaultTimeForFreq(freqSelect.value);
+    }
+  });
+
+  // 刪除按鈕
+  row.querySelector('.btnDelMed').addEventListener('click', () => {
+    const parent = row.parentElement;
+    row.remove();
+    // 保證至少保留一列（如果完全刪光，再補一列空的）
+    const hasRowsSameType = parent.querySelector('.med-row');
+    if (!hasRowsSameType) {
+      parent.appendChild(createMedRow(type));
+    }
+  });
+
+  return row;
+}
+
+// 把畫面上的 row 收集成陣列
+function collectMedRows() {
+  const rows = Array.from(document.querySelectorAll('.med-row'));
+  return rows.map(row => {
+    const type = row.dataset.type || 'oral';
+    const id = row.dataset.id || crypto.randomUUID();
+    const name = row.querySelector('.med-name')?.value.trim() || '';
+    const dose = row.querySelector('.med-dose')?.value.trim() || '';
+    const freq = row.querySelector('.med-freq')?.value || 'preB';
+    const time = row.querySelector('.med-time')?.value || defaultTimeForFreq(freq);
+    const enableRemind = !!row.querySelector('.med-enable')?.checked;
+    const leadMinutes = Number(row.querySelector('.med-lead')?.value || 30);
+
+    return { id, type, name, dose, freq, time, enableRemind, leadMinutes };
+  }).filter(m => m.name);   // 沒有藥名的不存
+}
+
+// 把資料渲染到畫面（清空再重畫）
+function renderMedsFromData(data) {
+  const oralList = document.getElementById('oralList');
+  const insList  = document.getElementById('insList');
+  oralList.innerHTML = '';
+  insList.innerHTML = '';
+
+  const meds = Array.isArray(data) ? data : [];
+
+  const oralMeds = meds.filter(m => m.type === 'oral');
+  const insMeds  = meds.filter(m => m.type === 'ins');
+
+  if (oralMeds.length === 0) {
+    oralList.appendChild(createMedRow('oral'));
+  } else {
+    oralMeds.forEach(m => oralList.appendChild(createMedRow('oral', m)));
+  }
+
+  if (insMeds.length === 0) {
+    insList.appendChild(createMedRow('ins'));
+  } else {
+    insMeds.forEach(m => insList.appendChild(createMedRow('ins', m)));
+  }
+}
+
+/* ============ 用藥清單 (API 整合版) ============ */
+async function saveMeds() {
+  const meds = collectMedRows(); // 收集畫面上使用者填的資料
+  if (meds.length === 0) { toast('請至少填寫一筆藥品名稱', 'err'); return; }
+  try {
+    await fetch(`${API_BASE}/meds/sync`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUserId, meds })
+    });
+    const r = document.getElementById('medsResult');
+    r.textContent = '已儲存用藥提醒。'; r.className = 'result ok';
+    toast('已儲存', 'ok');
+  syncMedsCacheForReminders();
+  } catch(e) { toast('儲存失敗', 'err'); }
+}
+
+async function loadMeds() {
+  try {
+    const res = await fetch(`${API_BASE}/meds/${currentUserId}`);
+    const json = await res.json();
+    renderMedsFromData(json.data || []);
+  } catch (e) { renderMedsFromData([]); }
+}
+
+async function clearMeds() {
+  if (!confirm('確定要清除所有用藥設定？')) return;
+  try {
+    await fetch(`${API_BASE}/meds/${currentUserId}`, { method: 'DELETE' });
+    renderMedsFromData([]);
+    const r = document.getElementById('medsResult');
+    r.textContent = '已清除所有設定。'; r.className = 'result';
+  } catch(e) { toast('清除失敗', 'err'); }
+}
+
+// 綁定按鈕
+document.getElementById('addOralRowBtn').addEventListener('click', () => {
+  document.getElementById('oralList').appendChild(createMedRow('oral'));
+});
+document.getElementById('addInsRowBtn').addEventListener('click', () => {
+  document.getElementById('insList').appendChild(createMedRow('ins'));
+});
+document.getElementById('saveMedsBtn').addEventListener('click', saveMeds);
+document.getElementById('clearMedsBtn').addEventListener('click', clearMeds);
+
+// 初次載入
+loadMeds();
+
+// === 併入原本的每分鐘輪詢：檢查用藥提醒 ===
+// 你原本在 setInterval 裡面最後有呼叫 window.__medReminderCheck();
+// 這裡重新定義它：每分鐘檢查是否命中「提醒時間」
+// 修改背景輪詢提醒：因為不能頻繁打 API，我們把它存進一個全域變數來做檢查
+let globalMedsCache = [];
+async function syncMedsCacheForReminders() {
+  try {
+    const res = await fetch(`${API_BASE}/meds/${currentUserId}`);
+    const json = await res.json();
+    globalMedsCache = json.data || [];
+  } catch(e) {}
+}
+// 頁面載入時同步一次緩存，之後若有按「儲存」建議也要呼叫此函數 (上面的 saveMeds 後方可以偷偷加 syncMedsCacheForReminders())
+syncMedsCacheForReminders(); 
+
+window.__medReminderCheck = function () {
+  if (!Array.isArray(globalMedsCache) || globalMedsCache.length === 0) return;
+  const now = new Date();
+  const hhmmNow = `${fmt2(now.getHours())}:${fmt2(now.getMinutes())}`;
+
+  globalMedsCache.forEach(m => {
+    if (!m.enableRemind || !m.name || !m.time) return;
+    const lead = (typeof m.leadMinutes === 'number') ? m.leadMinutes : 30;
+    const remindAt = timeMinusMinutes(m.time, lead);
+    if (remindAt === hhmmNow) {
+      const freqLabel = MED_FREQ_LABEL[m.freq] || '用藥時間';
+      const title = '用藥提醒';
+      const body = `${freqLabel}：請依醫囑服用 ${m.name}${m.dose ? '（' + m.dose + '）' : ''}`;
+
+      askNotifyPermission().then(ok => { if (ok) new Notification(title, { body }); });
+      const box = document.getElementById('medsResult');
+      if (box) { box.textContent = body; box.className = 'result'; }
+    }
+  });
+};
+
+
+    /* ================ (六) 使用時間與衛教觀看時間 (API 整合版) ================ */
+    const sessionStart = Date.now();
+    let eduStart = null;
+    let eduAccum = 0; 
+
+    // 1. 初始化：網頁載入時，先從 MongoDB 抓取歷史累計資料
+    async function initStatsFromDB() {
+      try {
+        const res = await fetch(`${API_BASE}/stats/${currentUserId}`);
+        const json = await res.json();
+        if (json.data && Object.keys(json.data).length > 0) {
+          // 把資料庫的進度寫入 LocalStorage，讓接下來的計時器接續計算
+          localStorage.setItem('totalUsedSec', json.data.totalUsedSec || 0);
+          localStorage.setItem('eduWatchSec', json.data.eduWatchSec || 0);
+          localStorage.setItem('countMsg', json.data.countMsg || 0);
+          localStorage.setItem('countGlu', json.data.countGlu || 0);
+        }
+      } catch(e) { }
+      
+      updateCounters();
+      eduAccum = Number(localStorage.getItem('eduWatchSec')||'0');
+    }
+    initStatsFromDB(); // 執行初始化
+
+    // 2. 更新互動次數的畫面
+    function updateCounters(){
+      $('countMsg').textContent = Number(localStorage.getItem('countMsg')||'0');
+      $('countGlu').textContent = Number(localStorage.getItem('countGlu')||'0');
+    }
+
+    // 3. 畫面計時器：每 1 秒更新畫面 (完全不打 API，效能最好)
+    setInterval(()=>{
+      const now = Date.now();
+      const sessionSec = (now - sessionStart)/1000;
+      $('sessionTime').textContent = mmss(sessionSec);
+      
+      const prev = Number(localStorage.getItem('totalUsedSec')||'0');
+      const total = prev + sessionSec;
+      $('totalTime').textContent = mmss(total);
+    }, 1000);
+
+    // 4. 衛教影片觀看計算 (當影片出現在畫面上才計時)
+    const io = new IntersectionObserver(entries=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting){
+          eduStart = Date.now(); // 進入畫面，開始計時
+        }else if(eduStart){
+          eduAccum += Math.floor((Date.now()-eduStart)/1000); // 離開畫面，結算剛看多久
+          eduStart = null;
+          localStorage.setItem('eduWatchSec', eduAccum);
+          $('eduWatchTime').textContent = `觀看 ${mmss(eduAccum)}`;
+        }
+      });
+    }, {threshold:0.5});
+    io.observe($('videoBox'));
+
+    // 影片畫面秒數更新
+    setInterval(()=>{
+      const curr = eduStart ? eduAccum + Math.floor((Date.now()-eduStart)/1000) : eduAccum;
+      $('eduWatchTime').textContent = `觀看 ${mmss(curr)}`;
+    }, 1000);
+
+    // 5. 同步資料到 MongoDB 的專用函數
+    async function syncStatsToDB() {
+      // 計算目前這次開網頁累積了多少秒
+      const used = Math.floor((Date.now() - sessionStart) / 1000);
+      const prev = Number(localStorage.getItem('totalUsedSec') || '0');
+      
+      // 確保影片時間是最新的
+      let currentEduAccum = eduAccum;
+      if (eduStart) {
+         currentEduAccum += Math.floor((Date.now() - eduStart) / 1000);
+      }
+
+      const payload = {
+        userId: currentUserId,
+        totalUsedSec: prev + used, // 總時間 = 過去總計 + 這次看了多久
+        eduWatchSec: currentEduAccum,
+        countMsg: Number(localStorage.getItem('countMsg')||'0'),
+        countGlu: Number(localStorage.getItem('countGlu')||'0')
+      };
+
+      try {
+        await fetch(`${API_BASE}/stats`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true // 確保網頁關閉時，請求還是能成功發送給伺服器
+        });
+      } catch(e) { }
+    }
+
+    // 6. 離開網頁前觸發 (寫入 localStorage 並同步到雲端)
+    window.addEventListener('beforeunload', ()=>{
+      const used = Math.floor((Date.now()-sessionStart)/1000);
+      const prev = Number(localStorage.getItem('totalUsedSec')||'0');
+      localStorage.setItem('totalUsedSec', prev + used);
+      
+      if (eduStart) {
+         eduAccum += Math.floor((Date.now()-eduStart)/1000);
+         localStorage.setItem('eduWatchSec', eduAccum);
+      }
+
+      syncStatsToDB();
+    });
+
+    // 7. 每 60 秒定期自動備份一次到雲端，避免手機瀏覽器直接被滑掉刪除 (無觸發 unload)
+    setInterval(syncStatsToDB, 60000);
+
+    /* ================ (六) 結束 ================ */
+
+    function toast(msg, type){
+      const el = document.createElement('div');
+      el.textContent = msg;
+      el.style.position='fixed'; el.style.bottom='20px'; el.style.left='50%'; el.style.transform='translateX(-50%)';
+      el.style.background= (type==='ok'? '#2E7D32' : '#D32F2F');
+      el.style.color='#fff'; el.style.padding='10px 14px'; el.style.borderRadius='6px'; el.style.boxShadow='0 2px 6px rgba(0,0,0,.2)';
+      el.style.zIndex='9999'; document.body.appendChild(el);
+      setTimeout(()=>{ el.remove(); }, 1800);
+    }
+  </script>
+</body>
+</html>

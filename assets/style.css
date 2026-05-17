@@ -1,0 +1,154 @@
+/* 定義網站主色調 */
+:root {
+  --green: #2E7D32;
+  --green-dark: #1B5E20;
+  --bg: #f4f7f6;
+  --text: #333;
+  --muted: #666;
+  --border: #e0e0e0;
+}
+
+body {
+  font-family: "Helvetica Neue", Arial, "微軟正黑體", sans-serif;
+  background-color: var(--bg);
+  margin: 0;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* 整體容器 */
+.container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* 頂部導覽列 */
+.nav {
+  background-color: var(--green);
+  color: white;
+  padding: 1.2rem 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* 中間登入卡片區域 */
+.center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+.card {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  box-sizing: border-box;
+}
+
+.card h1 {
+  margin-top: 0;
+  color: var(--green);
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.card p {
+  text-align: center;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.muted {
+  color: var(--muted) !important;
+  font-size: 0.95rem;
+}
+
+/* 分隔線 */
+.hr {
+  height: 1px;
+  background-color: var(--border);
+  margin: 1.5rem 0;
+}
+
+/* 表單元素 */
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  color: #444;
+}
+
+.input {
+  padding: 0.8rem 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+}
+
+/* 按鈕群組 */
+.row {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn {
+  flex: 1;
+  background-color: var(--green);
+  color: white;
+  border: none;
+  padding: 0.9rem;
+  font-size: 1.05rem;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none; /* 給 <a> 標籤用的 */
+  text-align: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.btn:hover {
+  background-color: var(--green-dark);
+}
+
+/* 次要按鈕 (例如切換手機登入的按鈕) */
+.btn.secondary {
+  background-color: white;
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+
+.btn.secondary:hover {
+  background-color: #f0fdf4;
+}
+
+/* 底部版權宣告 */
+.footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}

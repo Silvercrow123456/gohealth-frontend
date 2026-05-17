@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>健康網站｜登入</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="nav">
+      <div class="brand"><span class="logo"></span> 穩糖圈 go Health</div>
+    </div>
+
+    <div class="center">
+      <div class="card" style="width: 100%; max-width: 520px;">
+        <h1>登入</h1>
+        <p>首次登入會先進入 <b>TTM 測驗</b>；測驗完成後，再次登入將直接前往<b>穩糖圈 go Health主畫面</b>。</p>
+        <div class="hr"></div>
+        <form id="loginForm">
+          <label for="email">Email</label>
+          <input id="email" class="input" type="email" placeholder="you@example.com" required />
+
+          <div style="height: 10px"></div>
+
+          <label for="password">密碼</label>
+          <input id="password" class="input" type="password" placeholder="••••••••" required />
+
+          <div style="height: 16px"></div>
+          <div class="row">
+            <button class="btn" type="submit">登入</button>
+            <button class="btn secondary" type="button" id="phoneBtn">手機登入</button>
+          </div>
+        </form>
+
+        <div style="height: 16px"></div>
+      </div>
+    </div>
+
+    <div class="footer">© 2025 穩糖圈 go Health</div>
+  </div>
+
+  <script src="assets/auth.js"></script>
+  <script>
+    const form = document.getElementById('loginForm');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      if(!email){ alert('請輸入 email'); return; }
+
+      // 假裝驗證密碼：此處不驗證，後端實作時再補
+      const user = upsertUser(email, (u) => u);
+      setCurrentEmail(email);
+      routeAfterLogin(user);
+    });
+    const phoneBtn = document.getElementById('phoneBtn');
+if (phoneBtn) {
+  phoneBtn.addEventListener('click', () => {
+    // 路徑以 index.html 為相對參考點，mobile-login.html 放同一層資料夾就用這個
+    window.location.href = 'mobile-login.html';
+  });
+}
+
+
+  </script>
+</body>
+</html>
+
+<!-- trigger github pages deploy -->

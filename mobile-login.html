@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>健康網站｜手機登入</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="nav">
+      <div class="brand"><span class="logo"></span> 穩糖圈 go Health</div>
+    </div>
+
+    <div class="center">
+      <div class="card" style="width:100%; max-width:520px;">
+        <h1>手機登入</h1>
+        <p class="muted">輸入你的手機號碼（台灣門號可用 09xx-xxx-xxx 或 +8869 開頭）。</p>
+        <div class="hr"></div>
+
+        <form id="phoneForm">
+          <label for="phone">手機號碼</label>
+          <input id="phone" class="input" type="tel" placeholder="例如：0912-345-678 或 +886912345678" required />
+          <div style="height: 16px"></div>
+          <div class="row">
+            <button class="btn" type="submit">以手機登入</button>
+            <a class="btn secondary" href="index.html" style="text-align:center; line-height:36px;">返回</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="footer">© 2025 穩糖圈 go Health</div>
+  </div>
+
+  <!-- 直接沿用同一份 auth.js -->
+  <script src="assets/auth.js"></script>
+  <script>
+    // 簡單規範化：09xx 轉成 +8869 開頭；保留已是 +886 的寫法
+    function normalizeToE164(raw){
+      const digits = raw.replace(/[^\d+]/g, '');
+      if (digits.startsWith('+886')) return digits;
+      // 以 09 開頭（台灣手機）
+      const m = digits.match(/^0?9\d{8}$/);
+      if (m) return '+886' + digits.replace(/^0/, '');
+      // 其他情況就原樣回傳（Demo 環境，不做嚴格驗證）
+      return digits;
+    }
+
+    const form = document.getElementById('phoneForm');
+    form.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const raw = document.getElementById('phone').value.trim();
+      if (!raw){ alert('請輸入手機號碼'); return; }
+
+      const e164 = normalizeToE164(raw);
+      // 以 "phone:{號碼}" 當帳號 key，沿用現有 auth.js 結構
+      const accountKey = `phone:${e164}`;
+
+      const user = upsertUser(accountKey, (u)=>({
+        ...u,
+        phone: e164,
+        loginBy: 'phone'
+      }));
+      setCurrentEmail(accountKey);     // 沿用 existing API
+      routeAfterLogin(user);           // ➜ 未做 TTM 進 TTM；做過進主畫面
+    });
+  </script>
+</body>
+</html>
