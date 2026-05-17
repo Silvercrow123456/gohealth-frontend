@@ -1461,21 +1461,108 @@ async function renderConsultList(){
   } catch(e) { box.textContent = '無法讀取留言'; }
 }
 
+/* --- 留言板區塊 --- */
+function roleLabel(v){
+  const map = { doctor:'醫師', nurse:'護理師', dietitian:'營養師', pharmacist:'藥師', research:'研究團隊' };
+  return map[v] || v || '';
+}
+
+async function renderConsultList(){
+  const box = document.getElementById('consultList');
+  if(!box) return;
+  try {
+    const res = await fetch(`${API_BASE}/consults/${currentUserId}`);
+    const json = await res.json();
+    const list = json.data || [];
+    if(list.length === 0){ box.textContent = '目前沒有留言'; return; }
+
+    box.innerHTML = list.map(item => `
+      <div class="list-item">
+        <div>
+          <div><strong>${roleLabel(item.role)}</strong></div>
+          <div class="meta">${new Date(item.createdAt).toLocaleString()} ${item.consultTime ? '· 預約：'+new Date(item.consultTime).toLocaleString() : ''}</div>
+          <div style="margin-top:6px;">${item.message}</div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { box.textContent = '無法讀取留言'; }
+}
+
+// === 修改這裡：加入發送 Email 邏輯的 sendConsult ===
 async function sendConsult(){
   const role = document.getElementById('role')?.value || 'patient';
   const message = document.getElementById('consultMsg')?.value.trim() || '';
   const consultTime = document.getElementById('consultTime')?.value || ''; 
+  const isReserve = document.getElementById('reserveYes')?.checked; // 檢查是否有勾選預約
+
   if(!message){ toast('請先輸入留言內容', 'err'); return; }
 
+  // 1. 先將留言儲存到資料庫
   try {
     await fetch(`${API_BASE}/consults`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: currentUserId, role, message, consultTime })
     });
-    document.getElementById('consultMsg').value = '';
-    renderConsultList(); toast('留言已送出', 'ok');
-  } catch(e) { toast('送出失敗', 'err'); }
+    
+    document.getElementById('consultMsg').value = ''; // 清空輸入框
+    renderConsultList(); 
+    toast('留言已儲存並準備發送郵件', 'ok');
+    
+    // 2. 準備發送 Email
+    sendEmailToProfessional(role, message, isReserve, consultTime);
+
+  } catch(e) { 
+    toast('送出失敗', 'err'); 
+  }
 }
+
+// === 新增這個專屬寄信函數 ===
+function sendEmailToProfessional(role, message, isReserve, consultTime) {
+  // 角色對應的 Email 列表
+  const emailMap = {
+    doctor: 'Doctorchuang8777@gmail.com',     // 醫師 (請確認是否為 gmail)
+    nurse: 'bettywang1114@gmail.com',         // 護理師
+    dietitian: 'a8307142001@gmail.com',       // 營養師
+    pharmacist: 'g363110012@tmu.edu.tw',      // 藥師
+    research: 'b02552@mail.fjuh.fju.edu.tw'   // 研究團隊
+  };
+
+  const targetEmail = emailMap[role];
+  if (!targetEmail) return;
+
+  // 設定信件主旨
+  const subject = `[穩糖圈] 專業諮詢留言 - 來自病患 ${currentUserId}`;
+
+  // 設定信件內容 (包含帳號、留言、預約時間)
+  let body = `專業人員您好，\n\n收到來自「穩糖圈 go Health」使用者的諮詢留言：\n\n`;
+  body += `【使用者帳號 (Email/手機)】：${currentUserId}\n`;
+  body += `【留言內容】：\n${message}\n\n`;
+
+  // 判斷是否需要預約
+  if (isReserve && consultTime) {
+    const timeStr = new Date(consultTime).toLocaleString('zh-TW', { hour12: false });
+    body += `【預約時段】：需要預約 (${timeStr})\n`;
+  } else {
+    body += `【預約時段】：不需要預約\n`;
+  }
+
+  body += `\n--------------------------------\n(此信件由系統自動產生，請直接回覆此信箱聯絡該使用者)`;
+
+  // 透過瀏覽器喚醒 Email 軟體
+  window.location.href = `mailto:${targetEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+async function clearConsult(){
+  if(!confirm('確定要清空所有留言紀錄？')) return;
+  try {
+    await fetch(`${API_BASE}/consults/${currentUserId}`, { method: 'DELETE' });
+    renderConsultList(); toast('已清空留言紀錄', 'ok');
+  } catch(e) { toast('清空失敗', 'err'); }
+}
+
+document.getElementById('btnSendConsult')?.addEventListener('click', sendConsult);
+document.getElementById('btnClearConsult')?.addEventListener('click', clearConsult);
+renderConsultList();
 
 async function clearConsult(){
   if(!confirm('確定要清空所有留言紀錄？')) return;
