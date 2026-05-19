@@ -906,6 +906,11 @@
           toast('血糖紀錄已儲存至雲端','ok');
           $('glucose').value = ''; 
           $('glucoseTime').value = ''; 
+
+          const cnt = Number(localStorage.getItem('countGlu') || '0') + 1;
+          localStorage.setItem('countGlu', cnt);
+          if (typeof updateCounters === 'function') updateCounters();
+
           loadGlucoseHistory();    // 重新從資料庫抓取更新
           renderGlucoseLight(null);
         } else {
@@ -1461,54 +1466,32 @@ async function renderConsultList(){
   } catch(e) { box.textContent = '無法讀取留言'; }
 }
 
-/* --- 留言板區塊 --- */
-function roleLabel(v){
-  const map = { doctor:'醫師', nurse:'護理師', dietitian:'營養師', pharmacist:'藥師', research:'研究團隊' };
-  return map[v] || v || '';
-}
-
-async function renderConsultList(){
-  const box = document.getElementById('consultList');
-  if(!box) return;
-  try {
-    const res = await fetch(`${API_BASE}/consults/${currentUserId}`);
-    const json = await res.json();
-    const list = json.data || [];
-    if(list.length === 0){ box.textContent = '目前沒有留言'; return; }
-
-    box.innerHTML = list.map(item => `
-      <div class="list-item">
-        <div>
-          <div><strong>${roleLabel(item.role)}</strong></div>
-          <div class="meta">${new Date(item.createdAt).toLocaleString()} ${item.consultTime ? '· 預約：'+new Date(item.consultTime).toLocaleString() : ''}</div>
-          <div style="margin-top:6px;">${item.message}</div>
-        </div>
-      </div>
-    `).join('');
-  } catch(e) { box.textContent = '無法讀取留言'; }
-}
-
-// === 修改這裡：加入發送 Email 邏輯的 sendConsult ===
+// 發送留言主程式
 async function sendConsult(){
   const role = document.getElementById('role')?.value || 'patient';
   const message = document.getElementById('consultMsg')?.value.trim() || '';
   const consultTime = document.getElementById('consultTime')?.value || ''; 
-  const isReserve = document.getElementById('reserveYes')?.checked; // 檢查是否有勾選預約
+  const isReserve = document.getElementById('reserveYes')?.checked;
 
   if(!message){ toast('請先輸入留言內容', 'err'); return; }
 
-  // 1. 先將留言儲存到資料庫
   try {
+    // 1. 存入資料庫
     await fetch(`${API_BASE}/consults`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: currentUserId, role, message, consultTime })
     });
     
-    document.getElementById('consultMsg').value = ''; // 清空輸入框
+    // 2. 更新畫面與統計次數
+    document.getElementById('consultMsg').value = ''; 
+    const cnt = Number(localStorage.getItem('countMsg') || '0') + 1;
+    localStorage.setItem('countMsg', cnt);
+    if (typeof updateCounters === 'function') updateCounters();
+
     renderConsultList(); 
-    toast('留言已儲存並準備發送郵件', 'ok');
+    toast('留言已儲存，正在發送郵件...', 'ok');
     
-    // 2. 準備發送 Email
+    // 3. 呼叫背景寄信 API
     sendEmailToProfessional(role, message, isReserve, consultTime);
 
   } catch(e) { 
@@ -1516,40 +1499,47 @@ async function sendConsult(){
   }
 }
 
-// === 新增這個專屬寄信函數 ===
-function sendEmailToProfessional(role, message, isReserve, consultTime) {
-  // 角色對應的 Email 列表
+// 背景寄信專屬函數 (呼叫後端 API)
+async function sendEmailToProfessional(role, message, isReserve, consultTime) {
   const emailMap = {
-    doctor: 'Doctorchuang8777@gmail.com',     // 醫師 (請確認是否為 gmail)
-    nurse: 'bettywang1114@gmail.com',         // 護理師
-    dietitian: 'a8307142001@gmail.com',       // 營養師
-    pharmacist: 'g363110012@tmu.edu.tw',      // 藥師
-    research: 'b02552@mail.fjuh.fju.edu.tw'   // 研究團隊
+    doctor: 'Doctorchuang8777@gmail.com',     
+    nurse: 'bettywang1114@gmail.com',         
+    dietitian: 'a8307142001@gmail.com',       
+    pharmacist: 'g363110012@tmu.edu.tw',      
+    research: 'b02552@mail.fjuh.fju.edu.tw'   
   };
 
   const targetEmail = emailMap[role];
   if (!targetEmail) return;
 
-  // 設定信件主旨
   const subject = `[穩糖圈] 專業諮詢留言 - 來自病患 ${currentUserId}`;
-
-  // 設定信件內容 (包含帳號、留言、預約時間)
   let body = `專業人員您好，\n\n收到來自「穩糖圈 go Health」使用者的諮詢留言：\n\n`;
   body += `【使用者帳號 (Email/手機)】：${currentUserId}\n`;
   body += `【留言內容】：\n${message}\n\n`;
 
-  // 判斷是否需要預約
   if (isReserve && consultTime) {
     const timeStr = new Date(consultTime).toLocaleString('zh-TW', { hour12: false });
     body += `【預約時段】：需要預約 (${timeStr})\n`;
   } else {
     body += `【預約時段】：不需要預約\n`;
   }
+  body += `\n--------------------------------\n(此為系統自動發送之通知信，如需聯絡病患，請直接以病患之帳號聯絡)`;
 
-  body += `\n--------------------------------\n(此信件由系統自動產生，請直接回覆此信箱聯絡該使用者)`;
+  try {
+    const response = await fetch(`${API_BASE}/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: targetEmail, subject: subject, text: body })
+    });
 
-  // 透過瀏覽器喚醒 Email 軟體
-  window.location.href = `mailto:${targetEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    if(response.ok) {
+      toast('系統已成功發送通知信給該專業人員', 'ok');
+    } else {
+      toast('信件發送失敗，請稍後再試', 'err');
+    }
+  } catch (e) {
+    toast('寄信發生網路錯誤', 'err');
+  }
 }
 
 async function clearConsult(){
@@ -1562,60 +1552,38 @@ async function clearConsult(){
 
 document.getElementById('btnSendConsult')?.addEventListener('click', sendConsult);
 document.getElementById('btnClearConsult')?.addEventListener('click', clearConsult);
-renderConsultList();
+renderConsultList(); 
 
-async function clearConsult(){
-  if(!confirm('確定要清空所有留言紀錄？')) return;
-  try {
-    await fetch(`${API_BASE}/consults/${currentUserId}`, { method: 'DELETE' });
-    renderConsultList(); toast('已清空留言紀錄', 'ok');
-  } catch(e) { toast('清空失敗', 'err'); }
-}
-
-document.getElementById('btnSendConsult')?.addEventListener('click', sendConsult);
-document.getElementById('btnClearConsult')?.addEventListener('click', clearConsult);
-renderConsultList();
-
-
- /* ================ (新版) 用藥提醒：每藥品獨立頻率＋提前 X 分鐘提醒 ================ */
-
+/* ================ (新版) 用藥提醒 ================ */
 const MEDS_V2_KEY = 'medicationReminderV2';
 
-// 頻率選項：沿用你原本的概念
 const MED_FREQ_OPTIONS = [
   { value: 'preB',      label: '早餐飯前',      defaultTime: '07:30' },
   { value: 'postB',     label: '早餐飯後',      defaultTime: '08:00' },
-  { value: 'pre3',      label: '三餐飯前',      defaultTime: '07:30' },  // 只用其中一個時間做提醒起點
+  { value: 'pre3',      label: '三餐飯前',      defaultTime: '07:30' },
   { value: 'post3',     label: '三餐飯後',      defaultTime: '08:00' },
   { value: 'pre3+bed',  label: '三餐飯前＋睡前', defaultTime: '07:30' },
   { value: 'post3+bed', label: '三餐飯後＋睡前', defaultTime: '08:00' },
 ];
 
-// 頻率文字，用在通知內容
-const MED_FREQ_LABEL = MED_FREQ_OPTIONS.reduce((acc, x) => {
-  acc[x.value] = x.label;
-  return acc;
-}, {});
+const MED_FREQ_LABEL = MED_FREQ_OPTIONS.reduce((acc, x) => { acc[x.value] = x.label; return acc; }, {});
 
-// 取得某個頻率的預設時間
 function defaultTimeForFreq(freq) {
   const found = MED_FREQ_OPTIONS.find(f => f.value === freq);
   return (found && found.defaultTime) || '08:00';
 }
 
-// hh:mm 字串 - N 分鐘，回傳新的 hh:mm（24 小時制）
 function timeMinusMinutes(hhmm, mins) {
   if (!hhmm || !/^\d{2}:\d{2}$/.test(hhmm)) return hhmm || '';
   const [hStr, mStr] = hhmm.split(':');
   let total = parseInt(hStr, 10) * 60 + parseInt(mStr, 10) - (mins || 0);
   const DAY = 24 * 60;
-  total = ((total % DAY) + DAY) % DAY; // 確保在 0~1439
+  total = ((total % DAY) + DAY) % DAY; 
   const h = Math.floor(total / 60);
   const m = total % 60;
   return `${fmt2(h)}:${fmt2(m)}`;
 }
 
-// 建立一個用藥 row 的 DOM（type: 'oral' | 'ins'）
 function createMedRow(type, data = {}) {
   const row = document.createElement('div');
   row.className = 'list-item med-row';
@@ -1626,7 +1594,7 @@ function createMedRow(type, data = {}) {
   const dose = data.dose || '';
   const freq = data.freq || 'preB';
   const time = data.time || defaultTimeForFreq(freq);
-  const enableRemind = data.enableRemind !== false;  // 預設 true
+  const enableRemind = data.enableRemind !== false;  
   const leadMinutes = (typeof data.leadMinutes === 'number') ? data.leadMinutes : 30;
 
   row.innerHTML = `
@@ -1641,16 +1609,11 @@ function createMedRow(type, data = {}) {
           <input type="text" class="med-dose" placeholder="${type === 'oral' ? '例如：500 mg 1# bid' : '例如：10 單位'}" value="${dose}">
         </div>
       </div>
-
       <div class="row" style="margin-bottom:.4em;gap:.6em;align-items:center;">
         <div class="col">
           <label style="display:block;margin-bottom:.2em;">用藥頻率</label>
           <select class="med-freq">
-            ${MED_FREQ_OPTIONS.map(opt => `
-              <option value="${opt.value}" ${opt.value === freq ? 'selected' : ''}>
-                ${opt.label}
-              </option>
-            `).join('')}
+            ${MED_FREQ_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === freq ? 'selected' : ''}>${opt.label}</option>`).join('')}
           </select>
         </div>
         <div class="col">
@@ -1658,7 +1621,6 @@ function createMedRow(type, data = {}) {
           <input type="time" class="med-time" value="${time}">
         </div>
       </div>
-
       <div class="row" style="align-items:center;gap:.6em;">
         <label style="display:flex;align-items:center;gap:.3em;">
           <input type="checkbox" class="med-enable" ${enableRemind ? 'checked' : ''}>
@@ -1676,84 +1638,64 @@ function createMedRow(type, data = {}) {
     </div>
   `;
 
-  // 頻率改變時，如果時間欄是空的，帶入預設時間
   const freqSelect = row.querySelector('.med-freq');
   const timeInput = row.querySelector('.med-time');
   freqSelect.addEventListener('change', () => {
-    if (!timeInput.value) {
-      timeInput.value = defaultTimeForFreq(freqSelect.value);
-    }
+    if (!timeInput.value) timeInput.value = defaultTimeForFreq(freqSelect.value);
   });
 
-  // 刪除按鈕
   row.querySelector('.btnDelMed').addEventListener('click', () => {
     const parent = row.parentElement;
     row.remove();
-    // 保證至少保留一列（如果完全刪光，再補一列空的）
-    const hasRowsSameType = parent.querySelector('.med-row');
-    if (!hasRowsSameType) {
-      parent.appendChild(createMedRow(type));
-    }
+    if (!parent.querySelector('.med-row')) parent.appendChild(createMedRow(type));
   });
 
   return row;
 }
 
-// 把畫面上的 row 收集成陣列
 function collectMedRows() {
   const rows = Array.from(document.querySelectorAll('.med-row'));
   return rows.map(row => {
-    const type = row.dataset.type || 'oral';
-    const id = row.dataset.id || crypto.randomUUID();
-    const name = row.querySelector('.med-name')?.value.trim() || '';
-    const dose = row.querySelector('.med-dose')?.value.trim() || '';
-    const freq = row.querySelector('.med-freq')?.value || 'preB';
-    const time = row.querySelector('.med-time')?.value || defaultTimeForFreq(freq);
-    const enableRemind = !!row.querySelector('.med-enable')?.checked;
-    const leadMinutes = Number(row.querySelector('.med-lead')?.value || 30);
-
-    return { id, type, name, dose, freq, time, enableRemind, leadMinutes };
-  }).filter(m => m.name);   // 沒有藥名的不存
+    return { 
+      id: row.dataset.id || crypto.randomUUID(),
+      type: row.dataset.type || 'oral',
+      name: row.querySelector('.med-name')?.value.trim() || '',
+      dose: row.querySelector('.med-dose')?.value.trim() || '',
+      freq: row.querySelector('.med-freq')?.value || 'preB',
+      time: row.querySelector('.med-time')?.value || defaultTimeForFreq('preB'),
+      enableRemind: !!row.querySelector('.med-enable')?.checked,
+      leadMinutes: Number(row.querySelector('.med-lead')?.value || 30)
+    };
+  }).filter(m => m.name);
 }
 
-// 把資料渲染到畫面（清空再重畫）
 function renderMedsFromData(data) {
   const oralList = document.getElementById('oralList');
   const insList  = document.getElementById('insList');
-  oralList.innerHTML = '';
-  insList.innerHTML = '';
-
+  oralList.innerHTML = ''; insList.innerHTML = '';
   const meds = Array.isArray(data) ? data : [];
-
   const oralMeds = meds.filter(m => m.type === 'oral');
   const insMeds  = meds.filter(m => m.type === 'ins');
 
-  if (oralMeds.length === 0) {
-    oralList.appendChild(createMedRow('oral'));
-  } else {
-    oralMeds.forEach(m => oralList.appendChild(createMedRow('oral', m)));
-  }
+  if (oralMeds.length === 0) oralList.appendChild(createMedRow('oral'));
+  else oralMeds.forEach(m => oralList.appendChild(createMedRow('oral', m)));
 
-  if (insMeds.length === 0) {
-    insList.appendChild(createMedRow('ins'));
-  } else {
-    insMeds.forEach(m => insList.appendChild(createMedRow('ins', m)));
-  }
+  if (insMeds.length === 0) insList.appendChild(createMedRow('ins'));
+  else insMeds.forEach(m => insList.appendChild(createMedRow('ins', m)));
 }
 
-/* ============ 用藥清單 (API 整合版) ============ */
 async function saveMeds() {
-  const meds = collectMedRows(); // 收集畫面上使用者填的資料
+  const meds = collectMedRows(); 
   if (meds.length === 0) { toast('請至少填寫一筆藥品名稱', 'err'); return; }
   try {
     await fetch(`${API_BASE}/meds/sync`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: currentUserId, meds })
     });
-    const r = document.getElementById('medsResult');
-    r.textContent = '已儲存用藥提醒。'; r.className = 'result ok';
+    document.getElementById('medsResult').textContent = '已儲存用藥提醒。'; 
+    document.getElementById('medsResult').className = 'result ok';
     toast('已儲存', 'ok');
-  syncMedsCacheForReminders();
+    syncMedsCacheForReminders();
   } catch(e) { toast('儲存失敗', 'err'); }
 }
 
@@ -1770,12 +1712,11 @@ async function clearMeds() {
   try {
     await fetch(`${API_BASE}/meds/${currentUserId}`, { method: 'DELETE' });
     renderMedsFromData([]);
-    const r = document.getElementById('medsResult');
-    r.textContent = '已清除所有設定。'; r.className = 'result';
+    document.getElementById('medsResult').textContent = '已清除所有設定。'; 
+    document.getElementById('medsResult').className = 'result';
   } catch(e) { toast('清除失敗', 'err'); }
 }
 
-// 綁定按鈕
 document.getElementById('addOralRowBtn').addEventListener('click', () => {
   document.getElementById('oralList').appendChild(createMedRow('oral'));
 });
@@ -1784,14 +1725,9 @@ document.getElementById('addInsRowBtn').addEventListener('click', () => {
 });
 document.getElementById('saveMedsBtn').addEventListener('click', saveMeds);
 document.getElementById('clearMedsBtn').addEventListener('click', clearMeds);
-
-// 初次載入
 loadMeds();
 
-// === 併入原本的每分鐘輪詢：檢查用藥提醒 ===
-// 你原本在 setInterval 裡面最後有呼叫 window.__medReminderCheck();
-// 這裡重新定義它：每分鐘檢查是否命中「提醒時間」
-// 修改背景輪詢提醒：因為不能頻繁打 API，我們把它存進一個全域變數來做檢查
+// === 背景輪詢提醒功能 ===
 let globalMedsCache = [];
 async function syncMedsCacheForReminders() {
   try {
@@ -1800,7 +1736,6 @@ async function syncMedsCacheForReminders() {
     globalMedsCache = json.data || [];
   } catch(e) {}
 }
-// 頁面載入時同步一次緩存，之後若有按「儲存」建議也要呼叫此函數 (上面的 saveMeds 後方可以偷偷加 syncMedsCacheForReminders())
 syncMedsCacheForReminders(); 
 
 window.__medReminderCheck = function () {
@@ -1812,18 +1747,29 @@ window.__medReminderCheck = function () {
     if (!m.enableRemind || !m.name || !m.time) return;
     const lead = (typeof m.leadMinutes === 'number') ? m.leadMinutes : 30;
     const remindAt = timeMinusMinutes(m.time, lead);
+    
     if (remindAt === hhmmNow) {
       const freqLabel = MED_FREQ_LABEL[m.freq] || '用藥時間';
       const title = '用藥提醒';
       const body = `${freqLabel}：請依醫囑服用 ${m.name}${m.dose ? '（' + m.dose + '）' : ''}`;
 
-      askNotifyPermission().then(ok => { if (ok) new Notification(title, { body }); });
+      // 若有開啟瀏覽器通知則發送通知
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, { body });
+      }
+      
       const box = document.getElementById('medsResult');
-      if (box) { box.textContent = body; box.className = 'result'; }
+      if (box) { box.textContent = body; box.className = 'result ok'; }
     }
   });
 };
 
+// 【關鍵】：每 60 秒執行一次檢查用藥提醒
+setInterval(() => {
+  if (typeof window.__medReminderCheck === 'function') {
+    window.__medReminderCheck();
+  }
+}, 60000);
 
     /* ================ (六) 使用時間與衛教觀看時間 (API 整合版) ================ */
     const sessionStart = Date.now();
