@@ -197,59 +197,72 @@ h2{ text-align:center; color:#1e6a26; }
           requireLogin(true);
         });
 
-         // 3) 覆蓋你原本的 submitTTM：加上「標記完成 + 立即導向平台」
-        function submitTTM() {
-          const scores = [];
-          for (let i = 1; i <= 6; i++) {
-          const picked = document.querySelector(`input[name="q${i}"]:checked`);
-          if (!picked) { alert("請回答所有問題後再提交！"); return; }
+        // 3) 覆蓋你原本的 submitTTM：改為呼叫雲端 API
+async function submitTTM() {
+    const scores = [];
+    for (let i = 1; i <= 6; i++) {
+        const picked = document.querySelector(`input[name="q${i}"]:checked`);
+        if (!picked) { alert("請回答所有問題後再提交！"); return; }
         scores.push(Number(picked.value));
     }
 
-    // 你的 A/B/C 分組（原邏輯保留）
-    let group, resultClass;
-    if (scores.some(v => v === 1 || v === 2)) {
-      group = "A組（需加強關注）";  resultClass = "a";
-    } else if (scores.every(v => v === 5)) {
-      group = "C組（自主管理佳）";  resultClass = "c";
-    } else if (scores.every(v => v === 3 || v === 4)) {
-      group = "B組（中度自主管理）"; resultClass = "b";
-    } else {
-      group = "B組（中度自主管理）"; resultClass = "b";
+    const currentUserId = getCurrentEmail();
+    if (!currentUserId) {
+        alert("請先從登入頁登入");
+        window.location.replace("index.html");
+        return;
     }
 
-    // 額外：計總分 → 映射 TTM 階段（示範）
-    const total = scores.reduce((a,b)=>a+b, 0);
-    const stage = total <= 12 ? '無意圖期'
-                : total <= 18 ? '準備期'
-                : total <= 24 ? '行動期'
-                : '維持期';
+    // 將按鈕改成載入中，避免重複點擊
+    const btn = document.querySelector('button[onclick="submitTTM()"]');
+    btn.textContent = '提交中...';
+    btn.disabled = true;
 
-    // （可留存你自己的資料）
-    localStorage.setItem("ttmScores", JSON.stringify(scores));
-    localStorage.setItem("ttmGroup", group);
+    try {
+        // 請確保這串 API_BASE 和你 main.html 裡面的一樣！
+        const API_BASE = 'https://gohealth-backend.vercel.app/api'; 
+        
+        const response = await fetch(`${API_BASE}/ttm`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: currentUserId, scores: scores })
+        });
 
-    // 畫面上仍可顯示結果（教授看得到）
-    const resultDiv = document.getElementById("result");
-    resultDiv.innerHTML = `
-      <p>您的分組結果：<strong>${group}</strong></p>
-      <p>您的各題分數：<strong>${scores.join("、")}</strong></p>
-      <p>您的測驗總分：<strong>${total} 分</strong>（推估階段：<strong>${stage}</strong>）</p>
-    `;
-    resultDiv.className = `result ${resultClass}`;
-    resultDiv.style.display = "block";
+        if (response.ok) {
+            const resJson = await response.json();
+            const resultData = resJson.data;
 
-    // ✅ 關鍵：把「已完成 TTM」寫進使用者資料
-    const ok = markTtmCompleted(total, stage); // 這個函式在 auth.js 裡
-    if (!ok) {
-      alert("請先從登入頁登入");
-      window.location.replace("index.html");
-      return;
+            // 標記 auth.js 狀態為已完成
+            markTtmCompleted(resultData.totalScore, resultData.stage);
+
+            // 畫面上只顯示分數（不顯示分組）
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = `
+                <p>您的各題分數：<strong>${resultData.scores.join("、")}</strong></p>
+                <p>您的測驗總分：<strong>${resultData.totalScore} 分</strong></p>
+                <p style="color:#2E7D32; font-size:0.9em; margin-top:10px;">資料已儲存，3 秒後將自動進入主畫面...</p>
+            `;
+            resultDiv.className = `result`;
+            resultDiv.style.display = "block";
+            resultDiv.style.backgroundColor = "#e8f5e9";
+            resultDiv.style.borderColor = "#2E7D32";
+            resultDiv.style.color = "#1B5E20";
+
+            // 3 秒後自動跳轉到主畫面
+            setTimeout(() => {
+                window.location.replace("main.html");
+            }, 3000);
+        } else {
+            alert('儲存失敗，請檢查網路連線');
+            btn.textContent = '提交測驗';
+            btn.disabled = false;
+        }
+    } catch(e) {
+        alert('伺服器發生錯誤，無法儲存測驗結果');
+        btn.textContent = '提交測驗';
+        btn.disabled = false;
     }
-
-    // ✅ 立即導向你的平台首頁
-    window.location.replace("main.html");
-  }
+}
 </script>
 </body>
 </html>

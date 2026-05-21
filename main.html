@@ -779,22 +779,26 @@
     }
     function nowISO(){ return new Date().toISOString(); }
 
-    /* ================ 讀取 TTM 摘要（不顯示分組，只顯示各題分數） ================ */
-   (function loadTTM(){
-  try{
-    const scores = JSON.parse(localStorage.getItem('ttmScores')||'null');
-
-    // 不顯示分組結果（避免暴露操作/控制組或A/B組）
+    /* ================ 讀取 TTM 摘要 (從後端 API) ================ */
+async function loadTTM(){
+  try {
+    const res = await fetch(`${API_BASE}/ttm/${currentUserId}`);
+    const json = await res.json();
+    
+    // 把原本可能存在的 group 文字清空 (雙重保險)
     const groupEl = $('ttmGroupText');
-    if (groupEl) groupEl.textContent = '';   // 或改成 'TTM 測驗結果如下：'
+    if (groupEl) groupEl.textContent = ''; 
 
-    if (scores && Array.isArray(scores) && scores.length){
-      $('ttmScoresText').textContent = `各題分數：${scores.join('、')}`;
-    }else{
+    if (json.data && json.data.scores) {
+      $('ttmScoresText').innerHTML = `各題分數：<strong>${json.data.scores.join('、')}</strong><br>測驗總分：<strong>${json.data.totalScore}</strong>`;
+    } else {
       $('ttmScoresText').textContent = '尚未有 TTM 測驗結果';
     }
-  }catch(e){}
-   })();
+  } catch(e) {
+    $('ttmScoresText').textContent = '載入中...';
+  }
+}
+loadTTM(); // 網頁載入時呼叫
 
 
     /* ================ (二) 血糖即時回饋與紀錄 ================ */
