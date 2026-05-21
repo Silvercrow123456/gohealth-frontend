@@ -919,6 +919,9 @@
           localStorage.setItem('countGlu', cnt);
           if (typeof updateCounters === 'function') updateCounters();
 
+          //  這裡也補上同一行：立刻同步統計資料到雲端！
+            if (typeof syncStatsToDB === 'function') syncStatsToDB();
+
           loadGlucoseHistory();    // 重新從資料庫抓取更新
           renderGlucoseLight(null);
         } else {
@@ -1495,6 +1498,9 @@ async function sendConsult(){
     const cnt = Number(localStorage.getItem('countMsg') || '0') + 1;
     localStorage.setItem('countMsg', cnt);
     if (typeof updateCounters === 'function') updateCounters();
+
+       //  這裡也補上同一行：立刻同步統計資料到雲端！
+       if (typeof syncStatsToDB === 'function') syncStatsToDB();
 
     renderConsultList(); 
     toast('留言已儲存，正在發送郵件...', 'ok');
