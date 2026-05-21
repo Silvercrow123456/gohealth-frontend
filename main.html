@@ -766,10 +766,8 @@
   });
 </script>
 
-
-
   <script>
-    /* ================ 工具 ================ */
+    /* ================ 全域變數與工具 (請移到最上方) ================ */
     const $ = (id)=>document.getElementById(id);
     const fmt2 = (n)=> n.toString().padStart(2,'0');
     function mmss(sec){
@@ -779,34 +777,40 @@
     }
     function nowISO(){ return new Date().toISOString(); }
 
-    /* ================ 讀取 TTM 摘要 (從後端 API) ================ */
-async function loadTTM(){
-  try {
-    const res = await fetch(`${API_BASE}/ttm/${currentUserId}`);
-    const json = await res.json();
-    
-    // 把原本可能存在的 group 文字清空 (雙重保險)
-    const groupEl = $('ttmGroupText');
-    if (groupEl) groupEl.textContent = ''; 
-
-    if (json.data && json.data.scores) {
-      $('ttmScoresText').innerHTML = `各題分數：<strong>${json.data.scores.join('、')}</strong><br>測驗總分：<strong>${json.data.totalScore}</strong>`;
-    } else {
-      $('ttmScoresText').textContent = '尚未有 TTM 測驗結果';
-    }
-  } catch(e) {
-    $('ttmScoresText').textContent = '載入中...';
-  }
-}
-loadTTM(); // 網頁載入時呼叫
-
-
-    /* ================ (二) 血糖即時回饋與紀錄 ================ */
-    
-    // 設定 API 網址 (請確保這跟你的 Node.js server.js 裡面的 PORT 是一樣的)
+    // 【關鍵修正】把 API 網址跟使用者 ID 移到最前面，讓所有功能都讀得到！
     const API_BASE = 'https://gohealth-backend.vercel.app/api'; 
     const currentUserId = localStorage.getItem('currentEmail') || 'guest@example.com';
-    
+
+    /* ================ (一) 讀取 TTM 摘要 (從後端 API) ================ */
+    async function loadTTM() {
+      const scoresEl = document.getElementById('ttmScoresText');
+      try {
+        const res = await fetch(`${API_BASE}/ttm/${currentUserId}`);
+        const json = await res.json();
+
+        if (json.data && json.data.scores) {
+          // 成功抓到雲端資料：組合陣列並顯示
+          const scoresString = json.data.scores.join('、');
+          scoresEl.innerHTML = `
+            <span style="font-size: 1.1em;">各題分數：<strong>${scoresString}</strong></span><br>
+            <span style="font-size: 1.1em; display: inline-block; margin-top: 6px;">測驗總分：<strong>${json.data.totalScore} 分</strong></span>
+          `;
+        } else {
+          // 找不到雲端資料 (代表是舊帳號)：給予一個按鈕讓他補測驗
+          scoresEl.innerHTML = `
+            尚未在雲端找到您的 TTM 測驗結果。<br>
+            <a href="ttm.html" style="color: #1976D2; text-decoration: underline; font-weight: bold; display: inline-block; margin-top: 8px;">👉 點此補做 TTM 測驗</a>
+          `;
+        }
+      } catch(e) {
+        console.error("載入 TTM 發生錯誤:", e);
+        scoresEl.textContent = '無法連線至雲端，請重新整理頁面。';
+      }
+    }
+    // 網頁載入時立刻呼叫
+    loadTTM();
+
+    /* ================ (二) 血糖即時回饋與紀錄 ================ */
     // 建立一個變數來暫存從資料庫抓回來的紀錄，給「分享」按鈕使用
     let currentGlucoseLogs = []; 
 
