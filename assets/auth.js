@@ -11,10 +11,8 @@ function setCurrentEmail(email) {
 // 取得或更新使用者資料 (存放在 localStorage)
 function upsertUser(key, updateFn) {
   let users = JSON.parse(localStorage.getItem('users') || '{}');
-  // 如果使用者不存在，就建立一個預設的
   let user = users[key] || { id: key, createdAt: new Date().toISOString() };
   
-  // 執行更新
   user = updateFn(user);
   users[key] = user;
   
@@ -22,12 +20,46 @@ function upsertUser(key, updateFn) {
   return user;
 }
 
-// 登入後的路由判斷 (做過 TTM 去主畫面，沒做過 去 TTM測驗)
-function routeAfterLogin(user) {
+// ==========================================
+// 【關鍵修改】：登入後的路由判斷 (改為非同步向後端確認)
+// ==========================================
+async function routeAfterLogin(user) {
+  const email = getCurrentEmail();
+  
+  // 抓取畫面上的登入按鈕，讓它顯示載入中，避免使用者連點
+  const btn = document.querySelector('button[type="submit"]');
+  if(btn) {
+    btn.disabled = true;
+    btn.textContent = '檢查資料中...';
+  }
+
+  try {
+    // 1. 先去雲端資料庫檢查該帳號有沒有做過 TTM
+    // (注意：這裡的網址要跟你 main.html 的 API_BASE 一樣)
+    const res = await fetch(`https://gohealth-backend.vercel.app/api/ttm/${email}`);
+    const json = await res.json();
+    
+    // 2. 如果雲端有找到資料！
+    if (json.data && json.data.scores) {
+      // 幫這個新的瀏覽器補上「已完成」的打勾標記
+      upsertUser(email, (u) => {
+        u.ttm = { isCompleted: true };
+        return u;
+      });
+      // 直接帶往主畫面！
+      window.location.replace('main.html');
+      return; 
+    }
+  } catch (err) {
+    console.error('無法連線到雲端確認 TTM 狀態', err);
+  }
+
+  // 3. 如果雲端沒有資料，最後才檢查本機紀錄
   if (user.ttm && user.ttm.isCompleted) {
-    window.location.href = 'main.html';
+    window.location.replace('main.html');
   } else {
-    window.location.href = 'ttm.html';
+    // 如果兩邊都沒有，才乖乖去做測驗
+    window.location.replace('ttm.html');
   }
 }
 
@@ -50,7 +82,7 @@ function requireLogin(checkTtm = false) {
   return user;
 }
 
-// TTM 測驗完成後，在使用者資料內打勾 (這樣下次就不會再進入測驗)
+// TTM 測驗完成後，在本機資料內打勾
 function markTtmCompleted(total, stage) {
   const email = getCurrentEmail();
   if (!email) return false;
@@ -69,8 +101,6 @@ function markTtmCompleted(total, stage) {
 
 // 登出系統
 function logout() {
-  // 清除當前登入狀態
   localStorage.removeItem('currentEmail');
-  // 導回登入頁
   window.location.replace('index.html');
 }
