@@ -19,28 +19,26 @@
     }
     body{font-family:Arial, sans-serif; margin:0; padding:0; background:var(--bg);}
     header{
-    /* 兩層背景：半透明黑色漸層覆蓋在圖片上方 */
-    background:
-    linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)),
-    url("主畫面圖片.jpg") center / cover no-repeat;
-    /* 如果你用中文檔名，改這行： url("images/主畫面圖片.jpg") */
-  
-    color:#fff;
-    min-height: 180px;            /* 讓橫幅看起來像 Banner */
-    padding: 3.5em 1em;           /* 比原本高一些 */
-    display:flex;                 /* 垂直水平置中文字 */
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    font-size:1.8em;
-    font-weight:bold;
-    text-shadow: 0 2px 6px rgba(0,0,0,.5);  /* 讓白字更立體 */
-    box-shadow:0 4px 6px rgba(0,0,0,.25);
+      /* 換上新的看板圖片 banner.jpg，並加上一層很薄的黑色漸層，確保白色文字清楚可見 */
+      background:
+        linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.4)),
+        url("banner.jpg") center / cover no-repeat;
+      color: #fff;
+      min-height: 180px;            /* 讓橫幅看起來像 Banner */
+      padding: 3.5em 1em;           
+      display: flex;                 
+      align-items: center;
+      justify-content: space-between; /* 讓文字和按鈕可以左右對齊 */
+      text-align: center;
+      font-size: 1.8em;
+      font-weight: bold;
+      text-shadow: 0 2px 8px rgba(0,0,0, 0.9);  /* 讓白字更立體，不怕被亮色背景吃掉 */
+      box-shadow: 0 4px 6px rgba(0,0,0, 0.25);
     }
 
     /* 手機上讓高度再小一點 */
     @media (max-width: 600px){
-    header{ min-height: 140px; padding: 2.5em 1em; font-size:1.5em; }
+      header{ min-height: 140px; padding: 2.5em 1em; font-size:1.5em; }
     }
 
     .container{padding:2em; display:flex; flex-direction:row; justify-content:space-between; gap:1em;}
@@ -521,6 +519,7 @@
     
       <div class="controls" style="margin-top:.8em;">
         <button id="saveMedsBtn">儲存用藥提醒</button>
+        <button id="downloadMedsICSBtn" style="background:#1976D2;">匯出用藥行事曆（.ics）</button>
         <button id="clearMedsBtn" style="background:#9e9e9e;">清除所有設定</button>
       </div>
       <div id="medsResult" class="result"></div>
@@ -538,6 +537,13 @@
           </iframe>
         </div>
         <p class="muted">系統會估計你在此區塊的停留時間作為「衛教觀看時間」。</p>
+        <div style="text-align: center;">
+          <a href="https://drive.google.com/drive/u/0/folders/1-gsWHFJtD9CUDjd5eeisFIr_RPR9ETdX" 
+             target="_blank" 
+             style="display: inline-block; width: 100%; box-sizing: border-box; background-color: #1976D2; color: #fff; text-decoration: none; padding: 0.8em 1.2em; border-radius: 6px; font-size: 1.05em; font-weight: bold; transition: background 0.25s ease;">
+             📁 點此前往【穩糖圈衛教資料庫】(Google Drive)
+          </a>
+        </div>
       </div>
 
       <!-- (四) 互動式留言板 & 預約諮詢 -->
@@ -1740,6 +1746,167 @@ document.getElementById('addInsRowBtn').addEventListener('click', () => {
 document.getElementById('saveMedsBtn').addEventListener('click', saveMeds);
 document.getElementById('clearMedsBtn').addEventListener('click', clearMeds);
 loadMeds();
+
+/* =======================================================
+   (新增) 行事曆 (.ics) 匯出功能模組
+   ======================================================= */
+
+// 1. 共用工具函數
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+// 轉換為 ICS 格式的本地時間 (YYYYMMDDTHHMM00)
+function icsDateTimeLocal(d){
+  return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+}
+
+// 尋找「下一次」發生這個時間的日期
+function nextOccurrenceForTime(hhmm){
+  const [hh, mm] = (hhmm || '08:00').split(':').map(x => parseInt(x, 10));
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh || 0, mm || 0, 0);
+  if(d.getTime() <= now.getTime()){
+    d.setDate(d.getDate() + 1); // 如果今天的時間已經過了，就從明天開始
+  }
+  return d;
+}
+
+// ==========================================
+// 2. 血糖監測與回診提醒 .ics
+// ==========================================
+function buildICS(rem){
+  const lines = [];
+  const dtstamp = icsDateTimeLocal(new Date());
+  const uidBase = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+
+  lines.push('BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//go Health//Reminders//ZH-TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
+
+  // 每日血糖提醒
+  const dailyItems = [
+    { key:'tPreMeal',  title:'血糖提醒：早餐前量測', time: rem.tPreMeal },
+    { key:'tPostMeal', title:'血糖提醒：晚餐後量測', time: rem.tPostMeal },
+    { key:'tBedtime',  title:'血糖提醒：睡前量測',   time: rem.tBedtime },
+  ];
+
+  dailyItems.forEach((it, idx)=>{
+    if(!it.time) return;
+    const start = nextOccurrenceForTime(it.time);
+    lines.push('BEGIN:VEVENT', `UID:${uidBase}-glu-${idx}@gohealth`, `DTSTAMP:${dtstamp}`, `DTSTART:${icsDateTimeLocal(start)}`, `RRULE:FREQ=DAILY`, `SUMMARY:${it.title}`, 'DESCRIPTION:由「穩糖圈 go Health」匯出的每日提醒', 'END:VEVENT');
+  });
+
+  // 單次門診回診提醒
+  if(rem.nextAppt){
+    const [Y, M, D] = rem.nextAppt.split('-').map(x=>parseInt(x,10));
+    const appt = new Date(Y, (M||1)-1, D||1, 9, 0, 0); // 預設為早上 09:00
+    lines.push('BEGIN:VEVENT', `UID:${uidBase}-appt@gohealth`, `DTSTAMP:${dtstamp}`, `DTSTART:${icsDateTimeLocal(appt)}`, `DTEND:${icsDateTimeLocal(new Date(appt.getTime()+30*60*1000))}`, 'SUMMARY:門診追蹤回診提醒', 'DESCRIPTION:由「穩糖圈 go Health」匯出的門診回診事件', 'END:VEVENT');
+  }
+
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+
+function downloadICS(){
+  // 從畫面上直接抓取資料 (確保是最新的)
+  const rem = {
+    tPreMeal: document.getElementById('tPreMeal').value || '',
+    tPostMeal: document.getElementById('tPostMeal').value || '',
+    tBedtime: document.getElementById('tBedtime').value || '',
+    nextAppt: document.getElementById('nextAppt').value || '',
+  };
+
+  const hasAny = rem.tPreMeal || rem.tPostMeal || rem.tBedtime || rem.nextAppt;
+  if(!hasAny){
+    toast('請至少填一個提醒時間或回診日期再匯出','err');
+    return;
+  }
+
+  const ics = buildICS(rem);
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'gohealth-reminders.ics';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  toast('已匯出行事曆檔案 (.ics)','ok');
+}
+
+// ==========================================
+// 3. 用藥提醒 .ics
+// ==========================================
+function buildMedsICS(meds){
+  const lines = [];
+  const dtstamp = icsDateTimeLocal(new Date());
+  const uidBase = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+
+  lines.push('BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//go Health//Medication Reminders//ZH-TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
+
+  meds.forEach((m, idx) => {
+    if(!m.name) return;
+
+    // 相容多種時間格式設計
+    const times = Array.isArray(m.times) && m.times.length
+      ? m.times
+      : [{ label: MED_FREQ_LABEL[m.freq] || '用藥時間', time: m.time }];
+
+    const lead = Number(m.leadMinutes || 30);
+
+    times.forEach((t, timeIdx) => {
+      if(!t.time) return;
+      const start = nextOccurrenceForTime(t.time);
+
+      lines.push('BEGIN:VEVENT');
+      lines.push(`UID:${uidBase}-med-${idx}-${timeIdx}@gohealth`);
+      lines.push(`DTSTAMP:${dtstamp}`);
+      lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
+      lines.push('RRULE:FREQ=DAILY'); // 每天重複
+      lines.push(`SUMMARY:用藥提醒：${m.name}（${t.label || '用藥時間'}）`);
+      lines.push(`DESCRIPTION:${t.label || ''}${m.dose ? '；劑量/用法：' + m.dose : ''}`);
+
+      // 鬧鐘提醒設定 (VALARM)
+      if(m.enableRemind){
+        lines.push('BEGIN:VALARM');
+        lines.push(`TRIGGER:-PT${lead}M`); // 提前 XX 分鐘提醒
+        lines.push('ACTION:DISPLAY');
+        lines.push(`DESCRIPTION:${t.label || '用藥時間'}：請依醫囑服用 ${m.name}`);
+        lines.push('END:VALARM');
+      }
+
+      lines.push('END:VEVENT');
+    });
+  });
+
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+
+function downloadMedsICS(){
+  const meds = collectMedRows(); // 使用你現有的 collectMedRows 抓取畫面上填的資料
+
+  if(meds.length === 0){
+    toast('請至少填寫一筆藥品名稱再匯出', 'err');
+    return;
+  }
+
+  const ics = buildMedsICS(meds);
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'gohealth-medication-reminders.ics';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast('已匯出用藥行事曆檔案（.ics）', 'ok');
+}
+
+// 綁定按鈕事件
+document.getElementById('downloadICSBtn')?.addEventListener('click', downloadICS);
+document.getElementById('downloadMedsICSBtn')?.addEventListener('click', downloadMedsICS);
 
 // === 背景輪詢提醒功能 ===
 let globalMedsCache = [];
