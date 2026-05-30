@@ -787,7 +787,7 @@
     const API_BASE = 'https://gohealth-backend.vercel.app/api'; 
     const currentUserId = localStorage.getItem('currentEmail') || 'guest@example.com';
 
-    /* ================ (一) 讀取 TTM 摘要 (從後端 API) ================ */
+    /* ================ (一) 讀取 TTM 摘要與實驗分組 (API 整合版) ================ */
     async function loadTTM() {
       const scoresEl = document.getElementById('ttmScoresText');
       try {
@@ -795,25 +795,27 @@
         const json = await res.json();
 
         if (json.data && json.data.scores) {
-          // 成功抓到雲端資料：組合陣列並顯示
           const scoresString = json.data.scores.join('、');
-          scoresEl.innerHTML = `
-            <span style="font-size: 1.1em;">各題分數：<strong>${scoresString}</strong></span><br>
-            <span style="font-size: 1.1em; display: inline-block; margin-top: 6px;">測驗總分：<strong>${json.data.totalScore} 分</strong></span>
-          `;
-        } else {
-          // 找不到雲端資料 (代表是舊帳號)：給予一個按鈕讓他補測驗
-          scoresEl.innerHTML = `
-            尚未在雲端找到您的 TTM 測驗結果。<br>
-            <a href="ttm.html" style="color: #1976D2; text-decoration: underline; font-weight: bold; display: inline-block; margin-top: 8px;">👉 點此補做 TTM 測驗</a>
-          `;
+          if (scoresEl) scoresEl.innerHTML = `各題分數：<strong>${scoresString}</strong>`;
+
+          // 🟢 根據獨立抓出來的實驗分組 (rctGroup) 控制介面顯示
+          const rctGroup = json.data.rctGroup || 'experimental';
+          
+          if (rctGroup === 'control') {
+            const hideSections = ['secVideo', 'secConsult'];
+            hideSections.forEach(id => {
+               const navBtn = document.querySelector(`a[data-target="${id}"]`);
+               if (navBtn) navBtn.style.display = 'none';
+               const secBlock = document.getElementById(id);
+               if (secBlock) secBlock.style.display = 'none';
+               
+               const idx = SECTION_IDS.indexOf(id);
+               if (idx > -1) SECTION_IDS.splice(idx, 1);
+            });
+          }
         }
-      } catch(e) {
-        console.error("載入 TTM 發生錯誤:", e);
-        scoresEl.textContent = '無法連線至雲端，請重新整理頁面。';
-      }
+      } catch(e) { }
     }
-    // 網頁載入時立刻呼叫
     loadTTM();
 
     /* ================ (二) 血糖即時回饋與紀錄 ================ */
