@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>穩糖圈 - 研究人員後台</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); text-align: center; }
+    h1 { color: #1B5E20; margin-top: 0; }
+    button { background: #2E7D32; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; margin-top: 20px;}
+    button:hover { background: #1B5E20; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>📊 研究資料匯出系統</h1>
+    <p style="color: #666;">點擊下方按鈕，系統將即時從資料庫打包所有受試者的資料，<br>並產生適用於 SPSS/SAS 的 Excel 格式報表。</p>
+    <button onclick="downloadExcel()">📥 下載全部受試者資料 (Excel)</button>
+  </div>
+
+  <script>
+    // ⚠️ 記得把這裡換成你真實的 Vercel 後端網址
+    const API_BASE = 'https://gohealth-backend.vercel.app/api'; 
+
+    function downloadExcel() {
+      // 直接讓瀏覽器打開這個 API 網址，瀏覽器就會自動觸發下載檔案！
+      window.open(`${API_BASE}/export-excel`, '_blank');
+    }
+  </script>
+</body>
+</html>
