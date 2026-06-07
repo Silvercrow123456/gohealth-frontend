@@ -104,3 +104,12 @@ function logout() {
   localStorage.removeItem('currentEmail');
   window.location.replace('index.html');
 }
+// 註冊 PWA 的 Service Worker (全域生效)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // 注意路徑是 './sw.js'，因為這段程式碼會被 HTML 執行，所以相對於 HTML 的位置
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.log('PWA Service Worker 註冊失敗:', err);
+    });
+  });
+}
