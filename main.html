@@ -825,7 +825,7 @@
           }
 
           // 2. 🟢 根據獨立抓出來的實驗分組 (rctGroup) 控制介面顯示
-          const rctGroup = json.data.rctGroup || 'experimental';
+          const rctGroup = 'experimental';
           console.log("當前受試者分組:", rctGroup); // (可在瀏覽器 F12 主控台偷看分組)
           
           if (rctGroup === 'control') {
