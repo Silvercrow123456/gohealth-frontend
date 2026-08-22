@@ -546,23 +546,33 @@
 
     <!-- 右側 -->
     <div class="right">
-      <!-- 衛教影片（計時） -->
+      <!-- 衛教專區（計時與雲端連結） -->
       <div class="section content-section" id="secVideo">
-        <h2>糖尿病衛教影片 <span class="pill" id="eduWatchTime">觀看 0:00</span></h2>
-        <div class="video-container" id="videoBox">
-          <iframe src="https://www.youtube.com/embed/11YbpsgPP1I"
-                  title="Diabetes Education" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen>
-          </iframe>
+        <h2>糖尿病照護衛教 <span class="pill" id="eduWatchTime">觀看 0:00</span></h2>
+        
+        <!-- 將海報圖片包裝在 a 連結中，點擊可另開視窗前往雲端硬碟 (保留 id="videoBox" 讓系統繼續計時) -->
+        <div id="videoBox" style="margin-bottom: 1em; text-align: center; overflow: hidden; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s ease;">
+          <a href="https://drive.google.com/drive/u/0/folders/1-gsWHFJtD9CUDjd5eeisFIr_RPR9ETdX" target="_blank" style="display: block;">
+            <!-- 確保圖片能自適應螢幕大小，不會跑版 -->
+            <img src="edu-poster.png" alt="糖尿病照護衛教" style="width: 100%; height: auto; display: block; cursor: pointer;">
+          </a>
         </div>
-        <p class="muted">系統會估計你在此區塊的停留時間作為「衛教觀看時間」。</p>
+
+        <p class="muted" style="margin-bottom: 1.2em; text-align: center; line-height: 1.6;">
+          👆 點擊上方海報，即可前往觀看完整衛教影片。<br>
+          系統會估計您在此區塊的停留時間作為「衛教觀看時間」。
+        </p>
+        
+        <!-- 保留下方原本的藍色大按鈕，雙重保險，讓病患一定找得到連結 -->
         <div style="text-align: center;">
           <a href="https://drive.google.com/drive/u/0/folders/1-gsWHFJtD9CUDjd5eeisFIr_RPR9ETdX" 
              target="_blank" 
              style="display: inline-block; width: 100%; box-sizing: border-box; background-color: #1976D2; color: #fff; text-decoration: none; padding: 0.8em 1.2em; border-radius: 6px; font-size: 1.05em; font-weight: bold; transition: background 0.25s ease;">
-             📁 點此前往【穩糖圈衛教資料庫】(Google Drive)
+             📁 點此前往【穩糖圈衛教資料庫】
           </a>
         </div>
       </div>
+    </div>
 
       <!-- (四) 互動式留言板 & 預約諮詢 -->
       <div class="section content-section" id="secConsult">
@@ -824,7 +834,7 @@
              `;
           }
 
-          // 2. 🟢 根據獨立抓出來的實驗分組 (rctGroup) 控制介面顯示
+          // 🟢 根據獨立抓出來的實驗分組 (rctGroup) 控制介面顯示
           const rctGroup = json.data.rctGroup || 'experimental';
           console.log("當前受試者分組:", rctGroup); // (可在瀏覽器 F12 主控台偷看分組)
           
