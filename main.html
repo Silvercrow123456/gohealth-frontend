@@ -834,8 +834,13 @@
              `;
           }
 
+<<<<<<< HEAD
           // 🟢 根據獨立抓出來的實驗分組 (rctGroup) 控制介面顯示
           const rctGroup = json.data.rctGroup || 'experimental';
+=======
+          // 2. 🟢 根據獨立抓出來的實驗分組 (rctGroup) 控制介面顯示
+          const rctGroup = 'experimental';//這邊是為了demo,之後要改回const rctGroup = json.data.rctGroup || 'experimental';
+>>>>>>> 2f91e857e87555fa961e248f63a01b46d17becd9
           console.log("當前受試者分組:", rctGroup); // (可在瀏覽器 F12 主控台偷看分組)
           
           if (rctGroup === 'control') {
@@ -1695,12 +1700,13 @@ renderConsultList();
 const MEDS_V2_KEY = 'medicationReminderV2';
 
 const MED_FREQ_OPTIONS = [
-  { value: 'preB',      label: '早餐飯前',      defaultTime: '07:30' },
-  { value: 'postB',     label: '早餐飯後',      defaultTime: '08:00' },
-  { value: 'pre3',      label: '三餐飯前',      defaultTime: '07:30' },
-  { value: 'post3',     label: '三餐飯後',      defaultTime: '08:00' },
-  { value: 'pre3+bed',  label: '三餐飯前＋睡前', defaultTime: '07:30' },
-  { value: 'post3+bed', label: '三餐飯後＋睡前', defaultTime: '08:00' },
+  { value: 'preB',  label: '早餐前', defaultTime: '07:30' },
+  { value: 'postB', label: '早餐後', defaultTime: '08:30' },
+  { value: 'preL',  label: '午餐前', defaultTime: '11:30' },
+  { value: 'postL', label: '午餐後', defaultTime: '12:30' },
+  { value: 'preD',  label: '晚餐前', defaultTime: '17:30' },
+  { value: 'postD', label: '晚餐後', defaultTime: '18:30' },
+  { value: 'bed',   label: '睡前',   defaultTime: '21:30' }
 ];
 
 const MED_FREQ_LABEL = MED_FREQ_OPTIONS.reduce((acc, x) => { acc[x.value] = x.label; return acc; }, {});
