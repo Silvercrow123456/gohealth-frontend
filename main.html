@@ -81,6 +81,14 @@
     .chip.red{background:var(--red);}
     .chip.gray{background:#9e9e9e;}
     .hint{margin-top:.5em; padding:.6em .8em; border-radius:6px; border:1px dashed var(--border); background:#fafafa; color:#333;}
+    /* 🟢 放大血糖警示框的字體與排版 */
+    #glucoseAdvice {
+      font-size: 1.15em;    /* 字體放大 15% */
+      font-weight: bold;    /* 文字加粗 */
+      line-height: 1.6;     /* 增加行高，閱讀更舒服 */
+      padding: 12px 16px;   /* 讓框框變大一點 */
+      transition: all 0.3s ease; /* 變色時有流暢的動畫 */
+    }
     .list{border-top:1px solid var(--border); margin-top:.6em;}
     .list-item{padding:.6em 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:.8em; align-items:center;}
     .list-item .meta{font-size:.9em; color:#555;}
@@ -834,13 +842,8 @@
              `;
           }
 
-<<<<<<< HEAD
           // 🟢 根據獨立抓出來的實驗分組 (rctGroup) 控制介面顯示
           const rctGroup = json.data.rctGroup || 'experimental';
-=======
-          // 2. 🟢 根據獨立抓出來的實驗分組 (rctGroup) 控制介面顯示
-          const rctGroup = 'experimental';//這邊是為了demo,之後要改回const rctGroup = json.data.rctGroup || 'experimental';
->>>>>>> 2f91e857e87555fa961e248f63a01b46d17becd9
           console.log("當前受試者分組:", rctGroup); // (可在瀏覽器 F12 主控台偷看分組)
           
           if (rctGroup === 'control') {
@@ -888,11 +891,37 @@
 
     function renderGlucoseLight(v){
       const info = evalGlucose(v);
-      $('glucoseLight').innerHTML = `<span class="chip ${info.cls}">${info.label}</span>`;
+      
+      // 放大「紅/黃/綠/藍燈」那顆膠囊標籤
+      $('glucoseLight').innerHTML = `<span class="chip ${info.cls}" style="font-size: 1.1em; padding: 0.4em 0.8em;">${info.label}</span>`;
+      
       const ad = $('glucoseAdvice');
       if(info.advice){
         ad.style.display='block';
         ad.textContent = info.advice;
+        
+        // 🟢 根據不同燈號，動態改變警示框的背景與文字顏色
+        if (info.cls === 'red') {
+           ad.style.color = '#D32F2F'; // 紅字
+           ad.style.borderColor = '#D32F2F';
+           ad.style.backgroundColor = '#ffebee'; // 淺紅底
+        } else if (info.cls === 'blue') {
+           ad.style.color = '#1976D2'; // 藍字
+           ad.style.borderColor = '#1976D2';
+           ad.style.backgroundColor = '#e3f2fd'; // 淺藍底
+        } else if (info.cls === 'yellow') {
+           ad.style.color = '#E65100'; // 深橘黃字 (確保白底上清楚)
+           ad.style.borderColor = '#FBC02D';
+           ad.style.backgroundColor = '#fffde7'; // 淺黃底
+        } else if (info.cls === 'green') {
+           ad.style.color = '#2E7D32'; // 綠字
+           ad.style.borderColor = '#66BB6A';
+           ad.style.backgroundColor = '#e8f5e9'; // 淺綠底
+        } else {
+           ad.style.color = '#333';
+           ad.style.borderColor = 'var(--border)';
+           ad.style.backgroundColor = '#fafafa';
+        }
       }else{
         ad.style.display='none';
         ad.textContent = '';
@@ -1739,6 +1768,10 @@ function createMedRow(type, data = {}) {
   const time = data.time || defaultTimeForFreq(freq);
   const enableRemind = data.enableRemind !== false;  
   const leadMinutes = (typeof data.leadMinutes === 'number') ? data.leadMinutes : 30;
+  
+  // 🟢 讀取週期與星期資料
+  const cycle = data.cycle || 'daily';
+  const days = Array.isArray(data.days) ? data.days : [];
 
   row.innerHTML = `
     <div style="flex:1;min-width:0;">
@@ -1752,6 +1785,8 @@ function createMedRow(type, data = {}) {
           <input type="text" class="med-dose" placeholder="${type === 'oral' ? '例如：500 mg 1# bid' : '例如：10 單位'}" value="${dose}">
         </div>
       </div>
+      
+      <!-- 🟢 加入用藥週期選項 -->
       <div class="row" style="margin-bottom:.4em;gap:.6em;align-items:center;">
         <div class="col">
           <label style="display:block;margin-bottom:.2em;">用藥頻率</label>
@@ -1763,16 +1798,34 @@ function createMedRow(type, data = {}) {
           <label style="display:block;margin-bottom:.2em;">服藥時間</label>
           <input type="time" class="med-time" value="${time}">
         </div>
+        <div class="col">
+          <label style="display:block;margin-bottom:.2em;">用藥週期</label>
+          <select class="med-cycle">
+            <option value="daily" ${cycle === 'daily' ? 'selected' : ''}>每天</option>
+            <option value="weekly" ${cycle === 'weekly' ? 'selected' : ''}>每週特定天</option>
+          </select>
+        </div>
       </div>
+
+      <!-- 🟢 隱藏的星期選擇區塊 (選擇 weekly 才會出現) -->
+      <div class="row med-days-row" style="margin-bottom:.4em; display:${cycle === 'weekly' ? 'flex' : 'none'};">
+        <div class="col" style="font-size:0.95em;">
+          <span class="muted" style="margin-right:8px;">請勾選用藥日：</span>
+          ${[1, 2, 3, 4, 5, 6, 0].map(d => {
+            const labels = ['日','一','二','三','四','五','六'];
+            const isChecked = days.includes(d) ? 'checked' : '';
+            return `<label style="margin-right:8px; cursor:pointer;"><input type="checkbox" class="med-day-cb" value="${d}" ${isChecked}> 週${labels[d]}</label>`;
+          }).join('')}
+        </div>
+      </div>
+
       <div class="row" style="align-items:center;gap:.6em;">
         <label style="display:flex;align-items:center;gap:.3em;">
           <input type="checkbox" class="med-enable" ${enableRemind ? 'checked' : ''}>
           需要提醒
         </label>
         <div>
-          提前
-          <input type="number" class="med-lead" min="0" max="240" step="5" style="width:70px;" value="${leadMinutes}">
-          分鐘提醒
+          提前 <input type="number" class="med-lead" min="0" max="240" step="5" style="width:70px;" value="${leadMinutes}"> 分鐘提醒
         </div>
       </div>
     </div>
@@ -1781,10 +1834,18 @@ function createMedRow(type, data = {}) {
     </div>
   `;
 
+  // 綁定連動事件
   const freqSelect = row.querySelector('.med-freq');
   const timeInput = row.querySelector('.med-time');
+  const cycleSelect = row.querySelector('.med-cycle');
+  const daysRow = row.querySelector('.med-days-row');
+
   freqSelect.addEventListener('change', () => {
     if (!timeInput.value) timeInput.value = defaultTimeForFreq(freqSelect.value);
+  });
+
+  cycleSelect.addEventListener('change', () => {
+    daysRow.style.display = (cycleSelect.value === 'weekly') ? 'flex' : 'none';
   });
 
   row.querySelector('.btnDelMed').addEventListener('click', () => {
@@ -1799,6 +1860,10 @@ function createMedRow(type, data = {}) {
 function collectMedRows() {
   const rows = Array.from(document.querySelectorAll('.med-row'));
   return rows.map(row => {
+    // 🟢 收集週期與星期幾的資料
+    const cycle = row.querySelector('.med-cycle')?.value || 'daily';
+    const days = Array.from(row.querySelectorAll('.med-day-cb:checked')).map(cb => Number(cb.value));
+
     return { 
       id: row.dataset.id || crypto.randomUUID(),
       type: row.dataset.type || 'oral',
@@ -1807,7 +1872,9 @@ function collectMedRows() {
       freq: row.querySelector('.med-freq')?.value || 'preB',
       time: row.querySelector('.med-time')?.value || defaultTimeForFreq('preB'),
       enableRemind: !!row.querySelector('.med-enable')?.checked,
-      leadMinutes: Number(row.querySelector('.med-lead')?.value || 30)
+      leadMinutes: Number(row.querySelector('.med-lead')?.value || 30),
+      cycle: cycle,
+      days: days
     };
   }).filter(m => m.name);
 }
@@ -1969,34 +2036,36 @@ function buildMedsICS(meds){
   meds.forEach((m, idx) => {
     if(!m.name) return;
 
-    // 相容多種時間格式設計
-    const times = Array.isArray(m.times) && m.times.length
-      ? m.times
-      : [{ label: MED_FREQ_LABEL[m.freq] || '用藥時間', time: m.time }];
-
+    const times = [{ label: MED_FREQ_LABEL[m.freq] || '用藥時間', time: m.time }];
     const lead = Number(m.leadMinutes || 30);
 
     times.forEach((t, timeIdx) => {
       if(!t.time) return;
       const start = nextOccurrenceForTime(t.time);
 
+      // 🟢 判斷是每天還是特定星期幾
+      let rrule = 'RRULE:FREQ=DAILY';
+      if (m.cycle === 'weekly' && Array.isArray(m.days) && m.days.length > 0) {
+        const dayMap = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']; // 行事曆的星期代碼
+        const daysStr = m.days.map(d => dayMap[d]).join(',');
+        rrule = `RRULE:FREQ=WEEKLY;BYDAY=${daysStr}`;
+      }
+
       lines.push('BEGIN:VEVENT');
       lines.push(`UID:${uidBase}-med-${idx}-${timeIdx}@gohealth`);
       lines.push(`DTSTAMP:${dtstamp}`);
       lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
-      lines.push('RRULE:FREQ=DAILY'); // 每天重複
+      lines.push(rrule); // 寫入週期規則
       lines.push(`SUMMARY:用藥提醒：${m.name}（${t.label || '用藥時間'}）`);
       lines.push(`DESCRIPTION:${t.label || ''}${m.dose ? '；劑量/用法：' + m.dose : ''}`);
 
-      // 鬧鐘提醒設定 (VALARM)
       if(m.enableRemind){
         lines.push('BEGIN:VALARM');
-        lines.push(`TRIGGER:-PT${lead}M`); // 提前 XX 分鐘提醒
+        lines.push(`TRIGGER:-PT${lead}M`);
         lines.push('ACTION:DISPLAY');
         lines.push(`DESCRIPTION:${t.label || '用藥時間'}：請依醫囑服用 ${m.name}`);
         lines.push('END:VALARM');
       }
-
       lines.push('END:VEVENT');
     });
   });
@@ -2046,18 +2115,24 @@ window.__medReminderCheck = function () {
   if (!Array.isArray(globalMedsCache) || globalMedsCache.length === 0) return;
   const now = new Date();
   const hhmmNow = `${fmt2(now.getHours())}:${fmt2(now.getMinutes())}`;
+  const todayDay = now.getDay(); // 取得今天星期幾 (0-6)
 
   globalMedsCache.forEach(m => {
     if (!m.enableRemind || !m.name || !m.time) return;
+    
+    // 🟢 如果是每週特定天，但今天沒打勾，就直接跳過不提醒！
+    if (m.cycle === 'weekly' && Array.isArray(m.days) && m.days.length > 0) {
+      if (!m.days.includes(todayDay)) return; 
+    }
+
     const lead = (typeof m.leadMinutes === 'number') ? m.leadMinutes : 30;
     const remindAt = timeMinusMinutes(m.time, lead);
     
     if (remindAt === hhmmNow) {
       const freqLabel = MED_FREQ_LABEL[m.freq] || '用藥時間';
-      const title = '用藥提醒';
+      const title = '💊 用藥提醒';
       const body = `${freqLabel}：請依醫囑服用 ${m.name}${m.dose ? '（' + m.dose + '）' : ''}`;
 
-      // 若有開啟瀏覽器通知則發送通知
       if ("Notification" in window && Notification.permission === "granted") {
         new Notification(title, { body });
       }
