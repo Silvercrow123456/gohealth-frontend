@@ -552,160 +552,150 @@
     </div>
     
 
-    <!-- 右側 -->
-    <div class="right">
+      <!-- 右側 -->
+      <!-- 🟢 搬家：把這三個區塊移到 <div class="left"> 裡面，讓它們乖乖排在選單下面 -->
       <!-- 衛教專區（計時與雲端連結） -->
       <div class="section content-section" id="secVideo">
         <h2>糖尿病照護衛教 <span class="pill" id="eduWatchTime">觀看 0:00</span></h2>
-        
-        <!-- 將海報圖片包裝在 a 連結中，點擊可另開視窗前往雲端硬碟 (保留 id="videoBox" 讓系統繼續計時) -->
         <div id="videoBox" style="margin-bottom: 1em; text-align: center; overflow: hidden; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s ease;">
           <a href="https://drive.google.com/drive/u/0/folders/1-gsWHFJtD9CUDjd5eeisFIr_RPR9ETdX" target="_blank" style="display: block;">
-            <!-- 確保圖片能自適應螢幕大小，不會跑版 -->
             <img src="edu-poster.png" alt="糖尿病照護衛教" style="width: 100%; height: auto; display: block; cursor: pointer;">
           </a>
         </div>
-
         <p class="muted" style="margin-bottom: 1.2em; text-align: center; line-height: 1.6;">
           👆 點擊上方海報，即可前往觀看完整衛教影片。<br>
           系統會估計您在此區塊的停留時間作為「衛教觀看時間」。
         </p>
-        
-        <!-- 保留下方原本的藍色大按鈕，雙重保險，讓病患一定找得到連結 -->
         <div style="text-align: center;">
-          <a href="https://drive.google.com/drive/u/0/folders/1-gsWHFJtD9CUDjd5eeisFIr_RPR9ETdX" 
-             target="_blank" 
-             style="display: inline-block; width: 100%; box-sizing: border-box; background-color: #1976D2; color: #fff; text-decoration: none; padding: 0.8em 1.2em; border-radius: 6px; font-size: 1.05em; font-weight: bold; transition: background 0.25s ease;">
+          <a href="https://drive.google.com/drive/u/0/folders/1-gsWHFJtD9CUDjd5eeisFIr_RPR9ETdX" target="_blank" style="display: inline-block; width: 100%; box-sizing: border-box; background-color: #1976D2; color: #fff; text-decoration: none; padding: 0.8em 1.2em; border-radius: 6px; font-size: 1.05em; font-weight: bold; transition: background 0.25s ease;">
              📁 點此前往【穩糖圈衛教資料庫】
           </a>
         </div>
       </div>
-    </div>
 
       <!-- (四) 互動式留言板 & 預約諮詢 -->
       <div class="section content-section" id="secConsult">
         <h2>專業諮詢</h2>
-
-<div class="consult-grid" id="consultGrid">
-  <!-- row 1 -->
-  <div class="cg-label" id="roleTitle">預諮詢對象</div>
-  <div class="cg-field cg-span2" id="roleField">
-    <select id="role">
-      <option value="doctor">醫師</option>
-      <option value="nurse">護理師</option>
-      <option value="dietitian">營養師</option>
-      <option value="pharmacist">藥師</option>
-      <option value="research">研究團隊</option>
-    </select>
-  </div>
-
-  <!-- row 2 -->
-  <div class="cg-label">留言</div>
-  <div class="cg-field cg-span2">
-    <textarea id="consultMsg" rows="10" placeholder="請輸入想諮詢/留言的內容…"></textarea>
-  </div>
-
-  <!-- row 3 -->
-  <div class="cg-label" id="reserveTitle">預約諮詢</div>
-  <div class="cg-field" id="reserveOpt1">
-    <label class="cg-choice">
-      <input type="radio" name="reserveConsult" id="reserveYes" value="yes">
-      <span>需要</span>
-    </label>
-  </div>
-  <div class="cg-field" id="reserveOpt2">
-    <label class="cg-choice">
-      <input type="radio" name="reserveConsult" id="reserveNo" value="no" checked>
-      <span>不需要</span>
-    </label>
-  </div>
-
-<!-- row 4 (only show when "yes") -->
-  <div class="cg-label" id="reserveLabel" style="display:none;">預約諮詢時段</div>
-  <div class="cg-field" id="reserveFieldsL" style="display:none;">
-    <div class="cg-subtitle">日期</div>
-    <input type="date" id="consultDate">
-  </div>
-  <div class="cg-field" id="reserveFieldsR" style="display:none;">
-    <div class="cg-subtitle">時間（上午、下午、晚上）</div>
-    <select id="consultSlot">
-      <option value="">請選擇</option>
-      <option value="morning">上午</option>
-      <option value="noon">下午</option>
-      <option value="evening">晚上</option>
-    </select>
-  </div>
-
-  <input type="hidden" id="consultTime" value="">
-</div> <!-- 🟢 注意！在這裡提早關閉 .consult-grid 網格 -->
-
-<!-- 🟢 將按鈕與留言板移到網格的外面，保證 100% 寬度且橫向排列 -->
-<div class="consult-actions" style="margin-top: 20px; display: flex; gap: 10px;">
-  <button id="btnSendConsult">送出留言</button>
-  <button id="btnSaveReserve" style="background:#1976D2;">儲存預約</button>
-  <button id="btnClearConsult" style="background:#9e9e9e;">清空留言紀錄</button>
-</div>
-
-<div id="reserveResult" class="result"></div>
-<div id="consultList" style="margin-top: 20px;">目前沒有留言</div>
-
-</div>  <!-- 關閉 .consult-grid -->
-</div>  <!-- ✅ 這行是補上的：關閉 #secConsult -->
-
-
-<!-- (五) 血糖監測與回診提醒（新增，修正：原本選單有但內容不存在） -->
-<div class="section content-section" id="secReminders">
-  <h2>血糖監測回診提醒</h2>
-  <p class="muted">每日提醒（請允許本站通知，以便在頁面開啟時提示）</p>
-
-  <div class="reminder-wrap">
-    <!-- 左：血糖監測提醒 -->
-    <div class="reminder-block">
-      <div class="reminder-title">一、血糖監測提醒</div>
-
-      <div class="reminder-fields">
-        <div class="field">
-          <label for="tPreMeal">早餐前</label>
-          <input type="time" id="tPreMeal" />
+        <div class="consult-grid" id="consultGrid">
+          <div class="cg-label" id="roleTitle">預諮詢對象</div>
+          <div class="cg-field cg-span2" id="roleField">
+            <select id="role">
+              <option value="doctor">醫師</option>
+              <option value="nurse">護理師</option>
+              <option value="dietitian">營養師</option>
+              <option value="pharmacist">藥師</option>
+              <option value="research">研究團隊</option>
+            </select>
+          </div>
+          <div class="cg-label">留言</div>
+          <div class="cg-field cg-span2">
+            <textarea id="consultMsg" rows="10" placeholder="請輸入想諮詢/留言的內容…"></textarea>
+          </div>
+          <div class="cg-label" id="reserveTitle">預約諮詢</div>
+          <div class="cg-field" id="reserveOpt1">
+            <label class="cg-choice"><input type="radio" name="reserveConsult" id="reserveYes" value="yes"><span>需要</span></label>
+          </div>
+          <div class="cg-field" id="reserveOpt2">
+            <label class="cg-choice"><input type="radio" name="reserveConsult" id="reserveNo" value="no" checked><span>不需要</span></label>
+          </div>
+          <div class="cg-label" id="reserveLabel" style="display:none;">預約諮詢時段</div>
+          <div class="cg-field" id="reserveFieldsL" style="display:none;">
+            <div class="cg-subtitle">日期</div><input type="date" id="consultDate">
+          </div>
+          <div class="cg-field" id="reserveFieldsR" style="display:none;">
+            <div class="cg-subtitle">時間</div>
+            <select id="consultSlot"><option value="">請選擇</option><option value="morning">上午</option><option value="noon">下午</option><option value="evening">晚上</option></select>
+          </div>
+          <input type="hidden" id="consultTime" value="">
         </div>
-
-        <div class="field">
-          <label for="tPostMeal">晚餐後</label>
-          <input type="time" id="tPostMeal" />
+        <div class="consult-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+          <button id="btnSendConsult">送出留言</button>
+          <button id="btnSaveReserve" style="background:#1976D2;">儲存預約</button>
+          <button id="btnClearConsult" style="background:#9e9e9e;">清空留言紀錄</button>
         </div>
-
-        <div class="field" style="margin-bottom:0;">
-          <label for="tBedtime">睡前</label>
-          <input type="time" id="tBedtime" />
-        </div>
+        <div id="reserveResult" class="result"></div>
+        <div id="consultList" style="margin-top: 20px;">目前沒有留言</div>
       </div>
-    </div>
 
-    <!-- 右：回診提醒 -->
-    <div class="reminder-block">
-      <div class="reminder-title">二、回診提醒</div>
+      <!-- (五) 血糖監測與回診提醒 (加入星期選擇) -->
+      <div class="section content-section" id="secReminders">
+        <h2>血糖監測回診提醒</h2>
+        <p class="muted">每日/每週提醒（請允許本站通知，以便在頁面開啟時提示）</p>
 
-      <div class="reminder-fields">
-        <div class="field" style="margin-bottom:0;">
-          <label for="nextAppt">下次回診日期</label>
-          <input type="date" id="nextAppt" />
+        <div class="reminder-wrap">
+          <div class="reminder-block" style="margin-bottom: 20px;">
+            <div class="reminder-title" style="font-weight: bold; margin-bottom: 10px;">一、血糖監測提醒</div>
+            <div class="reminder-fields">
+              
+              <!-- 早餐前 -->
+              <div class="field" style="margin-bottom: 15px; border-bottom: 1px dashed #eee; padding-bottom: 10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                  <label for="tPreMeal">早餐前</label> <input type="time" id="tPreMeal" />
+                </div>
+                <div style="font-size: 0.9em; color: #555;">
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysPreMeal" value="1" checked>一</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysPreMeal" value="2" checked>二</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysPreMeal" value="3" checked>三</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysPreMeal" value="4" checked>四</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysPreMeal" value="5" checked>五</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysPreMeal" value="6" checked>六</label>
+                  <label><input type="checkbox" name="daysPreMeal" value="0" checked>日</label>
+                </div>
+              </div>
+
+              <!-- 晚餐後 -->
+              <div class="field" style="margin-bottom: 15px; border-bottom: 1px dashed #eee; padding-bottom: 10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                  <label for="tPostMeal">晚餐後</label> <input type="time" id="tPostMeal" />
+                </div>
+                <div style="font-size: 0.9em; color: #555;">
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysPostMeal" value="1" checked>一</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysPostMeal" value="2" checked>二</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysPostMeal" value="3" checked>三</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysPostMeal" value="4" checked>四</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysPostMeal" value="5" checked>五</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysPostMeal" value="6" checked>六</label>
+                  <label><input type="checkbox" name="daysPostMeal" value="0" checked>日</label>
+                </div>
+              </div>
+
+              <!-- 睡前 -->
+              <div class="field" style="margin-bottom: 10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                  <label for="tBedtime">睡前</label> <input type="time" id="tBedtime" />
+                </div>
+                <div style="font-size: 0.9em; color: #555;">
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysBedtime" value="1" checked>一</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysBedtime" value="2" checked>二</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysBedtime" value="3" checked>三</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysBedtime" value="4" checked>四</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysBedtime" value="5" checked>五</label>
+                  <label style="margin-right:4px;"><input type="checkbox" name="daysBedtime" value="6" checked>六</label>
+                  <label><input type="checkbox" name="daysBedtime" value="0" checked>日</label>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+          <div class="reminder-block">
+            <div class="reminder-title" style="font-weight: bold; margin-bottom: 10px;">二、回診提醒</div>
+            <div class="reminder-fields">
+              <div class="field" style="margin-bottom:0;"><label for="nextAppt">下次回診日期</label><input type="date" id="nextAppt" /></div>
+            </div>
+          </div>
         </div>
+
+        <div class="controls" style="margin-top:.9em;">
+          <button id="saveRemindersBtn">儲存提醒設定</button>
+          <button id="downloadICSBtn" style="background:#1976D2;">匯出回診行事曆（.ics）</button>
+        </div>
+        <div id="reminderResult" class="result"></div>
       </div>
-    </div>
-  </div>
 
-  <div class="controls" style="margin-top:.9em;">
-    <button id="saveRemindersBtn">儲存提醒設定</button>
-    <button id="downloadICSBtn" style="background:#1976D2;">匯出回診行事曆（.ics）</button>
-  </div>
+    </div> <!-- 🟢 左側區塊結束 -->
 
-  <div id="reminderResult" class="result"></div>
-</div>
-
-
-
-
-      <!-- (六) 使用時間統計（不進主選單，常駐顯示） -->
+    <!-- 🟢 右側區塊 (只留統計，並加上 sticky 讓它自動跟隨畫面滾動) -->
+    <div class="right" style="position: sticky; top: 20px; align-self: flex-start;">
       <div class="section">
         <h2>使用紀錄 / 統計</h2>
         <p>本次使用時長：<strong id="sessionTime">0:00</strong></p>
@@ -713,7 +703,8 @@
         <p>互動次數：留言 <strong id="countMsg">0</strong> 次、血糖紀錄 <strong id="countGlu">0</strong> 次</p>
       </div>
     </div>
-  </div>
+
+  </div> <!-- container 結束 -->
 
   <!-- ====== 區塊切換控制 (下拉選單版) ====== -->
   <script>
@@ -1384,15 +1375,48 @@ document.getElementById('calcKcalBtn').addEventListener('click', calcKcal);
 
 
 /* ============ (五) 血糖監測/回診提醒 (API 整合版) ============ */
+
+// 🟢 輔助函數：解析時間與星期 (格式: "07:30|1,3,5")
+function parseRem(val) {
+  if (!val) return null;
+  const parts = val.split('|');
+  const time = parts[0];
+  const days = parts.length > 1 && parts[1] !== "" ? parts[1].split(',').map(Number) : [0,1,2,3,4,5,6];
+  return { time, days };
+}
+
+// 🟢 輔助函數：編碼畫面上的資料為字串
+function encodeRem(timeId, daysName) {
+  const t = document.getElementById(timeId).value;
+  if (!t) return '';
+  const cbs = Array.from(document.querySelectorAll(`input[name="${daysName}"]:checked`));
+  const days = cbs.map(cb => cb.value).join(',');
+  return `${t}|${days}`;
+}
+
+// 🟢 輔助函數：將字串解碼並打勾畫面
+function decodeRem(val, timeId, daysName) {
+  if (!val) {
+    document.getElementById(timeId).value = '';
+    document.querySelectorAll(`input[name="${daysName}"]`).forEach(cb => cb.checked = true);
+    return;
+  }
+  const parsed = parseRem(val);
+  document.getElementById(timeId).value = parsed.time;
+  document.querySelectorAll(`input[name="${daysName}"]`).forEach(cb => {
+    cb.checked = parsed.days.includes(Number(cb.value));
+  });
+}
+
 async function loadReminders(){
   try{
     const res = await fetch(`${API_BASE}/reminders/${currentUserId}`);
     const json = await res.json();
     if(json.data) {
-      document.getElementById('tPreMeal').value  = json.data.tPreMeal  || '';
-      document.getElementById('tPostMeal').value = json.data.tPostMeal || '';
-      document.getElementById('tBedtime').value  = json.data.tBedtime  || '';
-      document.getElementById('nextAppt').value  = json.data.nextAppt  || '';
+      decodeRem(json.data.tPreMeal, 'tPreMeal', 'daysPreMeal');
+      decodeRem(json.data.tPostMeal, 'tPostMeal', 'daysPostMeal');
+      decodeRem(json.data.tBedtime, 'tBedtime', 'daysBedtime');
+      document.getElementById('nextAppt').value = json.data.nextAppt || '';
     }
   }catch(e){}
 }
@@ -1400,20 +1424,29 @@ async function loadReminders(){
 async function saveReminders(){
   const payload = {
     userId: currentUserId,
-    tPreMeal:  document.getElementById('tPreMeal').value || '',
-    tPostMeal: document.getElementById('tPostMeal').value || '',
-    tBedtime:  document.getElementById('tBedtime').value || '',
+    tPreMeal:  encodeRem('tPreMeal', 'daysPreMeal'),
+    tPostMeal: encodeRem('tPostMeal', 'daysPostMeal'),
+    tBedtime:  encodeRem('tBedtime', 'daysBedtime'),
     nextAppt:  document.getElementById('nextAppt').value || ''
   };
+
+  if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+    Notification.requestPermission();
+  }
+
   try {
     await fetch(`${API_BASE}/reminders`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
     });
+    
+    if (typeof syncRemindersCache === 'function') syncRemindersCache();
+
     const box = document.getElementById('reminderResult');
     if(box){ box.textContent = '已儲存提醒設定。'; box.className = 'result ok'; }
     toast('已儲存提醒設定','ok');
   } catch(e) { toast('儲存失敗', 'err'); }
 }
+
 function pad2(n){ return String(n).padStart(2,'0'); }
 
 function icsDateTimeLocal(d){
@@ -1438,45 +1471,50 @@ function buildICS(rem){
   const dtstamp = icsDateTimeLocal(now);
   const uidBase = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
 
-  lines.push('BEGIN:VCALENDAR');
-  lines.push('VERSION:2.0');
-  lines.push('PRODID:-//go Health//Reminders//ZH-TW');
-  lines.push('CALSCALE:GREGORIAN');
-  lines.push('METHOD:PUBLISH');
+  lines.push('BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//go Health//Reminders//ZH-TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
 
-  // 三個每日提醒（有填才輸出）
   const dailyItems = [
-    { key:'tPreMeal',  title:'血糖提醒：早餐前量測', time: rem.tPreMeal },
-    { key:'tPostMeal', title:'血糖提醒：晚餐後量測', time: rem.tPostMeal },
-    { key:'tBedtime',  title:'血糖提醒：睡前量測',   time: rem.tBedtime },
+    { key:'tPreMeal',  title:'血糖提醒：早餐前量測', val: rem.tPreMeal },
+    { key:'tPostMeal', title:'血糖提醒：晚餐後量測', val: rem.tPostMeal },
+    { key:'tBedtime',  title:'血糖提醒：睡前量測',   val: rem.tBedtime },
   ];
 
   dailyItems.forEach((it, idx)=>{
-    if(!it.time) return;
-    const start = nextOccurrenceForTime(it.time);
+    const parsed = parseRem(it.val);
+    if(!parsed || !parsed.time) return;
+    
+    const start = nextOccurrenceForTime(parsed.time);
+    const end = new Date(start.getTime() + 10 * 60000); 
+
+    // 🟢 判斷是每天，還是特定幾天
+    let rrule = 'RRULE:FREQ=DAILY';
+    if (parsed.days.length > 0 && parsed.days.length < 7) {
+      const dayMap = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+      rrule = `RRULE:FREQ=WEEKLY;BYDAY=${parsed.days.map(d => dayMap[d]).join(',')}`;
+    }
+
     lines.push('BEGIN:VEVENT');
     lines.push(`UID:${uidBase}-glu-${idx}@gohealth`);
     lines.push(`DTSTAMP:${dtstamp}`);
     lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
-    lines.push(`RRULE:FREQ=DAILY`);
+    lines.push(`DTEND:${icsDateTimeLocal(end)}`);
+    lines.push(rrule); // 寫入重複規則
     lines.push(`SUMMARY:${it.title}`);
-    lines.push('DESCRIPTION:由「穩糖圈 go Health」匯出的每日提醒');
+    lines.push('DESCRIPTION:由「穩糖圈 go Health」匯出的提醒');
+
+    lines.push('BEGIN:VALARM');
+    lines.push('TRIGGER:-PT0M'); 
+    lines.push('ACTION:DISPLAY');
+    lines.push(`DESCRIPTION:${it.title}！請記得量測血糖喔！`);
+    lines.push('END:VALARM');
     lines.push('END:VEVENT');
   });
 
-  // 回診事件（有填才輸出）
   if(rem.nextAppt){
     const [Y,M,D] = rem.nextAppt.split('-').map(x=>parseInt(x,10));
-    // 預設 09:00（你也可改 10:00）
     const appt = new Date(Y, (M||1)-1, D||1, 9, 0, 0);
-    lines.push('BEGIN:VEVENT');
-    lines.push(`UID:${uidBase}-appt@gohealth`);
-    lines.push(`DTSTAMP:${dtstamp}`);
-    lines.push(`DTSTART:${icsDateTimeLocal(appt)}`);
-    lines.push(`DTEND:${icsDateTimeLocal(new Date(appt.getTime()+30*60*1000))}`);
-    lines.push('SUMMARY:回診提醒（糖尿病追蹤）');
-    lines.push('DESCRIPTION:由「穩糖圈 go Health」匯出的回診事件');
-    lines.push('END:VEVENT');
+    lines.push('BEGIN:VEVENT', `UID:${uidBase}-appt@gohealth`, `DTSTAMP:${dtstamp}`, `DTSTART:${icsDateTimeLocal(appt)}`, `DTEND:${icsDateTimeLocal(new Date(appt.getTime()+30*60*1000))}`);
+    lines.push('SUMMARY:回診提醒（糖尿病追蹤）', 'DESCRIPTION:由「穩糖圈 go Health」匯出的回診事件', 'END:VEVENT');
   }
 
   lines.push('END:VCALENDAR');
@@ -1484,22 +1522,22 @@ function buildICS(rem){
 }
 
 function downloadICS(){
-  // 直接讀取畫面上輸入框裡的時間與日期
-  const rem = {
-    tPreMeal: document.getElementById('tPreMeal').value || '',
-    tPostMeal: document.getElementById('tPostMeal').value || '',
-    tBedtime: document.getElementById('tBedtime').value || '',
-    nextAppt: document.getElementById('nextAppt').value || '',
-  };
+   // 🟢 修正：使用 encodeRem 才能正確抓到使用者勾選了星期幾！
+   const rem = {
+     tPreMeal: encodeRem('tPreMeal', 'daysPreMeal'),
+     tPostMeal: encodeRem('tPostMeal', 'daysPostMeal'),
+     tBedtime: encodeRem('tBedtime', 'daysBedtime'),
+     nextAppt: document.getElementById('nextAppt').value || '',
+   };
 
-  const hasAny = rem.tPreMeal || rem.tPostMeal || rem.tBedtime || rem.nextAppt;
-  if(!hasAny){
-    toast('請至少填一個提醒時間或回診日期再匯出','err');
-    return;
-  }
+   const hasAny = rem.tPreMeal || rem.tPostMeal || rem.tBedtime || rem.nextAppt;
+   if(!hasAny){
+     toast('請至少填一個提醒時間或回診日期再匯出','err');
+     return;
+   }
 
-  const ics = buildICS(rem);
-  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+   const ics = buildICS(rem);
+   const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement('a');
@@ -2209,6 +2247,52 @@ async function syncMedsCacheForReminders() {
 }
 syncMedsCacheForReminders(); 
 
+// ==========================================
+// 🟢 新增：血糖提醒的 PWA 快取與檢查邏輯
+// ==========================================
+let globalRemindersCache = null;
+
+async function syncRemindersCache() {
+  try {
+    const res = await fetch(`${API_BASE}/reminders/${currentUserId}`);
+    const json = await res.json();
+    globalRemindersCache = json.data || null;
+  } catch(e) {}
+}
+syncRemindersCache(); // 網頁載入時立刻抓取一次
+
+window.__gluReminderCheck = function() {
+  if (!globalRemindersCache) return;
+  const now = new Date();
+  const hhmmNow = `${fmt2(now.getHours())}:${fmt2(now.getMinutes())}`;
+  const todayDay = now.getDay(); // 取得今天星期幾 (0 是週日, 1 是週一)
+
+  const checks = [
+    { val: globalRemindersCache.tPreMeal, title: '早餐前' },
+    { val: globalRemindersCache.tPostMeal, title: '晚餐後' },
+    { val: globalRemindersCache.tBedtime, title: '睡前' }
+  ];
+
+  checks.forEach(c => {
+    // 使用 parseRem 將 "07:30|1,3,5" 拆解還原
+    const parsed = parseRem(c.val);
+    
+    // 檢查今天是否有被勾選，並且現在的時間剛好吻合
+    if (parsed && parsed.days.includes(todayDay) && parsed.time === hhmmNow) {
+      const title = '🩸 血糖量測提醒';
+      const body = `時間到了！請進行「${c.title}」血糖量測，並回填至穩糖圈喔！`;
+
+      // 若有開啟瀏覽器通知，則跳出 PWA 通知
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, { body });
+      }
+      
+      const box = document.getElementById('reminderResult');
+      if (box) { box.textContent = body; box.className = 'result ok'; }
+    }
+  });
+};
+
 window.__medReminderCheck = function () {
   if (!Array.isArray(globalMedsCache) || globalMedsCache.length === 0) return;
   const now = new Date();
@@ -2245,6 +2329,10 @@ window.__medReminderCheck = function () {
 setInterval(() => {
   if (typeof window.__medReminderCheck === 'function') {
     window.__medReminderCheck();
+  }
+  // 🟢 補上呼叫血糖檢查
+  if (typeof window.__gluReminderCheck === 'function') {
+    window.__gluReminderCheck();
   }
 }, 60000);
 
