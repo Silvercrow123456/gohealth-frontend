@@ -621,35 +621,34 @@
   </div>
 
 <!-- row 4 (only show when "yes") -->
-<div class="cg-label" id="reserveLabel" style="display:none;">預約諮詢時段</div>
-<div class="cg-field" id="reserveFieldsL" style="display:none;">
-  <div class="cg-subtitle">日期</div>
-  <input type="date" id="consultDate">
-</div>
-<div class="cg-field" id="reserveFieldsR" style="display:none;">
-  <div class="cg-subtitle">時間（上午、下午、晚上）</div>
-  <select id="consultSlot">
-    <option value="">請選擇</option>
-    <option value="morning">上午</option>
-    <option value="noon">下午</option>
-    <option value="evening">晚上</option>
-  </select>
-</div>
+  <div class="cg-label" id="reserveLabel" style="display:none;">預約諮詢時段</div>
+  <div class="cg-field" id="reserveFieldsL" style="display:none;">
+    <div class="cg-subtitle">日期</div>
+    <input type="date" id="consultDate">
+  </div>
+  <div class="cg-field" id="reserveFieldsR" style="display:none;">
+    <div class="cg-subtitle">時間（上午、下午、晚上）</div>
+    <select id="consultSlot">
+      <option value="">請選擇</option>
+      <option value="morning">上午</option>
+      <option value="noon">下午</option>
+      <option value="evening">晚上</option>
+    </select>
+  </div>
 
-<!-- ✅ 保留舊的 consultTime（避免你原本 JS 讀取這個 id 會壞掉） -->
-<input type="hidden" id="consultTime" value="">
+  <input type="hidden" id="consultTime" value="">
+</div> <!-- 🟢 注意！在這裡提早關閉 .consult-grid 網格 -->
 
-<div class="consult-actions">
+<!-- 🟢 將按鈕與留言板移到網格的外面，保證 100% 寬度且橫向排列 -->
+<div class="consult-actions" style="margin-top: 20px; display: flex; gap: 10px;">
   <button id="btnSendConsult">送出留言</button>
-   <!-- ✅ 新增：儲存預約 -->
   <button id="btnSaveReserve" style="background:#1976D2;">儲存預約</button>
-  <button id="btnClearConsult">清空留言紀錄</button>
-
+  <button id="btnClearConsult" style="background:#9e9e9e;">清空留言紀錄</button>
 </div>
-<!-- ✅ 新增：顯示儲存結果 -->
-<div id="reserveResult" class="result"></div>
 
-<div id="consultList">目前沒有留言</div>
+<div id="reserveResult" class="result"></div>
+<div id="consultList" style="margin-top: 20px;">目前沒有留言</div>
+
 </div>  <!-- 關閉 .consult-grid -->
 </div>  <!-- ✅ 這行是補上的：關閉 #secConsult -->
 
@@ -1587,6 +1586,41 @@ function initConsultPanel(){
 initConsultPanel();
 
 /* ============ 預約諮詢與留言板 (API 整合版) ============ */
+// 🟢 新增：產生預約諮詢專用 ICS 的函數
+function buildConsultICS(consultTimeISO) {
+  if (!consultTimeISO) return '';
+  
+  const start = new Date(consultTimeISO);
+  // 假設預約諮詢時段為 30 分鐘
+  const end = new Date(start.getTime() + 30 * 60000);
+  
+  const dtstamp = icsDateTimeLocal(new Date());
+  const uidBase = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+  
+  const lines = [];
+  lines.push('BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//go Health//Consultation//ZH-TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
+  lines.push('BEGIN:VEVENT');
+  lines.push(`UID:${uidBase}-consult@gohealth`);
+  lines.push(`DTSTAMP:${dtstamp}`);
+  lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
+  lines.push(`DTEND:${icsDateTimeLocal(end)}`);
+  lines.push(`SUMMARY:穩糖圈 - 專業諮詢預約`);
+  lines.push('DESCRIPTION:您在「穩糖圈 go Health」預約的專業諮詢時段。');
+  
+  // 加上鬧鐘：提早 30 分鐘提醒
+  lines.push('BEGIN:VALARM');
+  lines.push('TRIGGER:-PT30M'); 
+  lines.push('ACTION:DISPLAY');
+  lines.push('DESCRIPTION:穩糖圈專業諮詢即將開始！');
+  lines.push('END:VALARM');
+
+  lines.push('END:VEVENT');
+  lines.push('END:VCALENDAR');
+  
+  return lines.join('\r\n');
+}
+
+// 🟢 修改：修復隱形 Bug 並加入下載 ICS 邏輯
 async function saveReserve(){
   const yes = document.getElementById('reserveYes')?.checked;
   const date = document.getElementById('consultDate')?.value || '';
@@ -1594,15 +1628,46 @@ async function saveReserve(){
   const consultTime = document.getElementById('consultTime')?.value || '';
 
   if(yes && (!date || !slot)){
-    showReserveResult('請先選擇日期與時段再儲存預約。', false); toast('請先選擇日期與時段', 'err'); return;
+    toast('請先選擇日期與時段再儲存預約', 'err'); 
+    return;
   }
+  
   const payload = { userId: currentUserId, need: !!yes, date, slot, consultTime };
+  
   try {
     await fetch(`${API_BASE}/reservation`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
     });
-    showReserveResult(yes ? '已儲存預約諮詢。' : '已儲存：不需要預約。', true); toast('預約設定已儲存', 'ok');
-  } catch(e) { toast('儲存失敗', 'err'); }
+    
+    // 修復畫面顯示文字的邏輯
+    const resBox = document.getElementById('reserveResult');
+    if (resBox) {
+      resBox.textContent = yes ? '已儲存預約諮詢。' : '已儲存：不需要預約。';
+      resBox.className = 'result ok';
+    }
+    toast('預約設定已儲存', 'ok');
+
+    // 🟢 如果使用者有勾選「需要預約」並且有時間，就觸發 ICS 下載
+    if (yes && consultTime) {
+      const ics = buildConsultICS(consultTime);
+      if (ics) {
+        const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'gohealth-consultation.ics';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 1000);
+        
+        toast('已匯出預約行事曆 (.ics)', 'ok');
+      }
+    }
+    
+  } catch(e) { 
+    toast('儲存失敗', 'err'); 
+  }
 }
 
 async function loadReserve(){
@@ -1642,7 +1707,6 @@ loadReserve();
         if(list.length === 0){ box.textContent = '目前沒有留言'; return; }
 
         box.innerHTML = list.map(item => {
-          // 🟢 檢查是否有管理員回覆
           const replyHTML = item.reply ? `
             <div style="margin-top:12px; padding:12px; background:#e8f5e9; border-left:4px solid #2E7D32; border-radius:6px;">
               <div style="font-weight:bold; color:#1B5E20; font-size:0.9em; margin-bottom:4px;">👨‍⚕️ 管理員/團隊回覆 (${new Date(item.repliedAt).toLocaleString()})：</div>
@@ -1650,13 +1714,16 @@ loadReserve();
             </div>
           ` : '';
 
+          // 🟢 判斷標題：只要是控制組，或「沒有預約時間(單純留言)」，就顯示「聯絡系統」
+          const displayTitle = (window.currentRctGroup === 'control' || !item.consultTime) ? '聯絡系統' : roleLabel(item.role);
+
           return `
-          <div class="list-item" style="flex-direction: column; align-items: stretch; background: #fff;">
+          <div class="list-item" style="flex-direction: column; align-items: stretch; background: #fff; width: 100%; box-sizing: border-box;">
             <div style="display: flex; justify-content: space-between;">
-              <strong>${window.currentRctGroup === 'control' ? '聯絡系統' : roleLabel(item.role)}</strong>
+              <strong>${displayTitle}</strong>
               <span class="meta">${new Date(item.createdAt).toLocaleString()}</span>
             </div>
-            ${item.consultTime ? `<div class="meta" style="color:var(--blue);">📅 預約時段：${new Date(item.consultTime).toLocaleString()}</div>` : ''}
+            ${item.consultTime ? `<div class="meta" style="color:var(--blue); margin-top: 4px;">📅 預約時段：${new Date(item.consultTime).toLocaleString()}</div>` : ''}
             <div style="margin-top:8px; line-height:1.5;">${item.message}</div>
             ${replyHTML}
           </div>
@@ -1666,34 +1733,38 @@ loadReserve();
 
     async function sendConsult(){
       const isControl = (window.currentRctGroup === 'control');
+      const isReserve = isControl ? false : (document.getElementById('reserveYes')?.checked || false);
       
-      // 控制組強制將對象設定為 research，並清空預約時間
-      const role = isControl ? 'research' : (document.getElementById('role')?.value || 'patient');
-      const consultTime = isControl ? '' : (document.getElementById('consultTime')?.value || ''); 
-      const isReserve = isControl ? false : document.getElementById('reserveYes')?.checked;
+      // 🟢 關鍵邏輯：如果是純留言(沒有預約)，一律將對象改為 'research' 送給後端 Admin
+      const role = isReserve ? (document.getElementById('role')?.value || 'patient') : 'research';
+      const consultTime = isReserve ? (document.getElementById('consultTime')?.value || '') : ''; 
       const message = document.getElementById('consultMsg')?.value.trim() || '';
 
       if(!message){ toast('請先輸入留言內容', 'err'); return; }
 
       try {
-        // 1. 存入資料庫
         await fetch(`${API_BASE}/consults`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: currentUserId, role, message, consultTime })
         });
-        // 2. 更新畫面與統計次數
+        
         document.getElementById('consultMsg').value = ''; 
         const cnt = Number(localStorage.getItem('countMsg') || '0') + 1;
         localStorage.setItem('countMsg', cnt);
         if (typeof updateCounters === 'function') updateCounters();
-        //  立刻同步統計資料到雲端！
         if (typeof syncStatsToDB === 'function') syncStatsToDB();
 
         renderConsultList(); 
-        toast('留言已送出', 'ok');
         
-        // 3. 呼叫背景寄信 API
-        sendEmailToProfessional(role, message, isReserve, consultTime);
+        // 🟢 修改：只有在「有勾選預約」的情況下，才發送 Email
+        if (isReserve) {
+          toast('預約與留言已送出，正在發送通知信給專業人員...', 'ok');
+          sendEmailToProfessional(role, message, isReserve, consultTime);
+        } else {
+          // 純留言（Control組 或 Experimental組不預約），不寄信，只顯示送出成功
+          toast('留言已送出給系統', 'ok');
+        }
+        
       } catch(e) { toast('送出失敗', 'err'); }
     }
 
