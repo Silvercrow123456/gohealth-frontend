@@ -1459,13 +1459,24 @@ function icsDateTimeLocal(d){
   return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
 }
 
-function nextOccurrenceForTime(hhmm){
-  // 以「下一次會發生」的日期時間作為 DTSTART
-  const [hh, mm] = (hhmm || '00:00').split(':').map(x=>parseInt(x,10));
+// 🟢 升級版：計算下一次發生的時間，並且「確保這天剛好是你勾選的星期幾」！
+function nextOccurrenceForTimeAndDays(hhmm, days) {
+  const [hh, mm] = (hhmm || '00:00').split(':').map(x => parseInt(x, 10));
   const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh||0, mm||0, 0);
-  if(d.getTime() <= now.getTime()){
-    d.setDate(d.getDate()+1);
+  let d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh || 0, mm || 0, 0);
+  
+  // 如果今天的時間已經過了，從明天開始算
+  if (d.getTime() <= now.getTime()) {
+    d.setDate(d.getDate() + 1);
+  }
+  
+  // 如果有勾選特定星期，就一直往後找，直到找到符合的星期幾為止 (避免行事曆錯亂)
+  if (days && days.length > 0 && days.length < 7) {
+    let attempts = 0;
+    while (!days.includes(d.getDay()) && attempts < 7) {
+      d.setDate(d.getDate() + 1);
+      attempts++;
+    }
   }
   return d;
 }
@@ -1485,16 +1496,17 @@ function buildICS(rem){
   ];
 
   dailyItems.forEach((it, idx)=>{
-    const parsed = parseRem(it.val);
+    const parsed = parseRem(it.val); // 解析出 time 和 days
     if(!parsed || !parsed.time) return;
     
-    const start = nextOccurrenceForTime(parsed.time);
+    // 🟢 呼叫新版函數，保證起始日期落在有勾選的星期幾
+    const start = nextOccurrenceForTimeAndDays(parsed.time, parsed.days);
     const end = new Date(start.getTime() + 10 * 60000); 
 
     // 🟢 判斷是每天，還是特定幾天
     let rrule = 'RRULE:FREQ=DAILY';
     if (parsed.days.length > 0 && parsed.days.length < 7) {
-      const dayMap = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+      const dayMap = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']; // 0 是週日, 1 是週一...
       rrule = `RRULE:FREQ=WEEKLY;BYDAY=${parsed.days.map(d => dayMap[d]).join(',')}`;
     }
 
@@ -1503,7 +1515,7 @@ function buildICS(rem){
     lines.push(`DTSTAMP:${dtstamp}`);
     lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
     lines.push(`DTEND:${icsDateTimeLocal(end)}`);
-    lines.push(rrule); // 寫入重複規則
+    lines.push(rrule); // 寫入正確的重複規則
     lines.push(`SUMMARY:${it.title}`);
     lines.push('DESCRIPTION:由「穩糖圈 go Health」匯出的提醒');
 
@@ -1515,6 +1527,7 @@ function buildICS(rem){
     lines.push('END:VEVENT');
   });
 
+  // 回診事件
   if(rem.nextAppt){
     const [Y,M,D] = rem.nextAppt.split('-').map(x=>parseInt(x,10));
     const appt = new Date(Y, (M||1)-1, D||1, 9, 0, 0);
@@ -1526,23 +1539,23 @@ function buildICS(rem){
   return lines.join('\r\n');
 }
 
+// 🟢 修正：使用 encodeRem 來抓取資料，確實把病患勾選的星期抓下來！
 function downloadICS(){
-   // 🟢 修正：使用 encodeRem 才能正確抓到使用者勾選了星期幾！
-   const rem = {
-     tPreMeal: encodeRem('tPreMeal', 'daysPreMeal'),
-     tPostMeal: encodeRem('tPostMeal', 'daysPostMeal'),
-     tBedtime: encodeRem('tBedtime', 'daysBedtime'),
-     nextAppt: document.getElementById('nextAppt').value || '',
-   };
+  const rem = {
+    tPreMeal: encodeRem('tPreMeal', 'daysPreMeal'),
+    tPostMeal: encodeRem('tPostMeal', 'daysPostMeal'),
+    tBedtime: encodeRem('tBedtime', 'daysBedtime'),
+    nextAppt: document.getElementById('nextAppt').value || '',
+  };
 
-   const hasAny = rem.tPreMeal || rem.tPostMeal || rem.tBedtime || rem.nextAppt;
-   if(!hasAny){
-     toast('請至少填一個提醒時間或回診日期再匯出','err');
-     return;
-   }
+  const hasAny = rem.tPreMeal || rem.tPostMeal || rem.tBedtime || rem.nextAppt;
+  if(!hasAny){
+    toast('請至少填寫一個提醒時間或回診日期再匯出','err');
+    return;
+  }
 
-   const ics = buildICS(rem);
-   const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const ics = buildICS(rem);
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement('a');
@@ -1555,6 +1568,7 @@ function downloadICS(){
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
   toast('已匯出行事曆檔案 (.ics)','ok');
 }
+
 /* 綁定提醒按鈕 */
 document.getElementById('saveRemindersBtn')?.addEventListener('click', saveReminders);
 document.getElementById('downloadICSBtn')?.addEventListener('click', downloadICS);
