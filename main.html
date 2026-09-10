@@ -630,57 +630,65 @@
               <!-- 早餐前 -->
               <div class="field" style="margin-bottom: 15px; border-bottom: 1px dashed #eee; padding-bottom: 10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                  <label for="tPreMeal">早餐前</label> <input type="time" id="tPreMeal" />
+                  <label for="tPreMeal" style="margin:0;">早餐前</label> 
+                  <input type="time" id="tPreMeal" style="width:auto; margin:0;" />
                 </div>
-                <div style="font-size: 0.9em; color: #555;">
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysPreMeal" value="1" checked>一</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysPreMeal" value="2" checked>二</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysPreMeal" value="3" checked>三</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysPreMeal" value="4" checked>四</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysPreMeal" value="5" checked>五</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysPreMeal" value="6" checked>六</label>
-                  <label><input type="checkbox" name="daysPreMeal" value="0" checked>日</label>
+                <!-- 🟢 加入 inline-flex 覆蓋預設 CSS，讓星期乖乖橫排 -->
+                <div style="font-size: 0.95em; color: #555; display: flex; flex-wrap: wrap; gap: 8px;">
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPreMeal" value="1" style="width:auto; margin:0 4px 0 0;" checked>一</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPreMeal" value="2" style="width:auto; margin:0 4px 0 0;" checked>二</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPreMeal" value="3" style="width:auto; margin:0 4px 0 0;" checked>三</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPreMeal" value="4" style="width:auto; margin:0 4px 0 0;" checked>四</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPreMeal" value="5" style="width:auto; margin:0 4px 0 0;" checked>五</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPreMeal" value="6" style="width:auto; margin:0 4px 0 0;" checked>六</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPreMeal" value="0" style="width:auto; margin:0 4px 0 0;" checked>日</label>
                 </div>
               </div>
 
               <!-- 晚餐後 -->
               <div class="field" style="margin-bottom: 15px; border-bottom: 1px dashed #eee; padding-bottom: 10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                  <label for="tPostMeal">晚餐後</label> <input type="time" id="tPostMeal" />
+                  <label for="tPostMeal" style="margin:0;">晚餐後</label> 
+                  <input type="time" id="tPostMeal" style="width:auto; margin:0;" />
                 </div>
-                <div style="font-size: 0.9em; color: #555;">
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysPostMeal" value="1" checked>一</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysPostMeal" value="2" checked>二</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysPostMeal" value="3" checked>三</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysPostMeal" value="4" checked>四</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysPostMeal" value="5" checked>五</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysPostMeal" value="6" checked>六</label>
-                  <label><input type="checkbox" name="daysPostMeal" value="0" checked>日</label>
+                <div style="font-size: 0.95em; color: #555; display: flex; flex-wrap: wrap; gap: 8px;">
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPostMeal" value="1" style="width:auto; margin:0 4px 0 0;" checked>一</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPostMeal" value="2" style="width:auto; margin:0 4px 0 0;" checked>二</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPostMeal" value="3" style="width:auto; margin:0 4px 0 0;" checked>三</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPostMeal" value="4" style="width:auto; margin:0 4px 0 0;" checked>四</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPostMeal" value="5" style="width:auto; margin:0 4px 0 0;" checked>五</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPostMeal" value="6" style="width:auto; margin:0 4px 0 0;" checked>六</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPostMeal" value="0" style="width:auto; margin:0 4px 0 0;" checked>日</label>
                 </div>
               </div>
 
               <!-- 睡前 -->
               <div class="field" style="margin-bottom: 10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                  <label for="tBedtime">睡前</label> <input type="time" id="tBedtime" />
+                  <label for="tBedtime" style="margin:0;">睡前</label> 
+                  <input type="time" id="tBedtime" style="width:auto; margin:0;" />
                 </div>
-                <div style="font-size: 0.9em; color: #555;">
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysBedtime" value="1" checked>一</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysBedtime" value="2" checked>二</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysBedtime" value="3" checked>三</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysBedtime" value="4" checked>四</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysBedtime" value="5" checked>五</label>
-                  <label style="margin-right:4px;"><input type="checkbox" name="daysBedtime" value="6" checked>六</label>
-                  <label><input type="checkbox" name="daysBedtime" value="0" checked>日</label>
+                <div style="font-size: 0.95em; color: #555; display: flex; flex-wrap: wrap; gap: 8px;">
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysBedtime" value="1" style="width:auto; margin:0 4px 0 0;" checked>一</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysBedtime" value="2" style="width:auto; margin:0 4px 0 0;" checked>二</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysBedtime" value="3" style="width:auto; margin:0 4px 0 0;" checked>三</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysBedtime" value="4" style="width:auto; margin:0 4px 0 0;" checked>四</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysBedtime" value="5" style="width:auto; margin:0 4px 0 0;" checked>五</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysBedtime" value="6" style="width:auto; margin:0 4px 0 0;" checked>六</label>
+                  <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysBedtime" value="0" style="width:auto; margin:0 4px 0 0;" checked>日</label>
                 </div>
               </div>
               
             </div>
           </div>
+
           <div class="reminder-block">
             <div class="reminder-title" style="font-weight: bold; margin-bottom: 10px;">二、回診提醒</div>
             <div class="reminder-fields">
-              <div class="field" style="margin-bottom:0;"><label for="nextAppt">下次回診日期</label><input type="date" id="nextAppt" /></div>
+              <div class="field" style="margin-bottom:0;">
+                <label for="nextAppt" style="margin:0 0 8px 0;">下次回診日期</label>
+                <input type="date" id="nextAppt" style="width:auto; margin:0;"/>
+              </div>
             </div>
           </div>
         </div>
@@ -692,19 +700,16 @@
         <div id="reminderResult" class="result"></div>
       </div>
 
-    </div> <!-- 🟢 左側區塊結束 -->
-
-    <!-- 🟢 右側區塊 (只留統計，並加上 sticky 讓它自動跟隨畫面滾動) -->
-    <div class="right" style="position: sticky; top: 20px; align-self: flex-start;">
+      <!-- (六) 使用時間統計（🟢 直接搬回主區塊的最下方，並拿掉右側攔） -->
       <div class="section">
         <h2>使用紀錄 / 統計</h2>
         <p>本次使用時長：<strong id="sessionTime">0:00</strong></p>
         <p>累計使用時長：<strong id="totalTime">0:00</strong></p>
         <p>互動次數：留言 <strong id="countMsg">0</strong> 次、血糖紀錄 <strong id="countGlu">0</strong> 次</p>
       </div>
-    </div>
 
-  </div> <!-- container 結束 -->
+    </div> <!-- 🟢 左側區塊結束 -->
+  </div> <!-- 🟢 container 結束 -->
 
   <!-- ====== 區塊切換控制 (下拉選單版) ====== -->
   <script>
