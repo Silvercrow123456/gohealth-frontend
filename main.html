@@ -457,7 +457,7 @@
   <h3 style="margin:.2em 0 .4em; color:#1B5E20;">二、檢驗數據</h3>
   <div class="grid">
     <div>
-      <label for="creatinine">腎功能 Creatinine（mg/dL）</label>
+      <label for="creatinine">肌酸酐 Creatinine（mg/dL）</label>
       <input type="number" id="creatinine" placeholder="例如：1.0" step="0.01"/>
     </div>
 
@@ -588,8 +588,8 @@
 
 <div class="consult-grid" id="consultGrid">
   <!-- row 1 -->
-  <div class="cg-label">預諮詢對象</div>
-  <div class="cg-field cg-span2">
+  <div class="cg-label" id="roleTitle">預諮詢對象</div>
+  <div class="cg-field cg-span2" id="roleField">
     <select id="role">
       <option value="doctor">醫師</option>
       <option value="nurse">護理師</option>
@@ -602,18 +602,18 @@
   <!-- row 2 -->
   <div class="cg-label">留言</div>
   <div class="cg-field cg-span2">
-    <textarea id="consultMsg" rows="10" placeholder="請輸入想諮詢的內容…"></textarea>
+    <textarea id="consultMsg" rows="10" placeholder="請輸入想諮詢/留言的內容…"></textarea>
   </div>
 
   <!-- row 3 -->
-  <div class="cg-label">預約諮詢</div>
-  <div class="cg-field">
+  <div class="cg-label" id="reserveTitle">預約諮詢</div>
+  <div class="cg-field" id="reserveOpt1">
     <label class="cg-choice">
       <input type="radio" name="reserveConsult" id="reserveYes" value="yes">
       <span>需要</span>
     </label>
   </div>
-  <div class="cg-field">
+  <div class="cg-field" id="reserveOpt2">
     <label class="cg-choice">
       <input type="radio" name="reserveConsult" id="reserveNo" value="no" checked>
       <span>不需要</span>
@@ -823,7 +823,10 @@
     const API_BASE = 'https://gohealth-backend.vercel.app/api'; 
     const currentUserId = localStorage.getItem('currentEmail') || 'guest@example.com';
 
-    /* ================ (一) 讀取 TTM 摘要與實驗分組 (API 整合版) ================ */
+    // 🟢 設定一個全域變數，紀錄病患是哪一組，方便後面發送留言時判斷
+    window.currentRctGroup = 'experimental'; 
+
+    /* ================ (一) 讀取 TTM 摘要與實驗分組 (最新完整防呆版) ================ */
     async function loadTTM() {
       const scoresEl = document.getElementById('ttmScoresText');
       if (scoresEl) scoresEl.innerHTML = '讀取中...'; // 給予讀取提示
@@ -842,33 +845,49 @@
              `;
           }
 
-          // 🟢 根據獨立抓出來的實驗分組 (rctGroup) 控制介面顯示
-          const rctGroup = json.data.rctGroup || 'experimental';
-          console.log("當前受試者分組:", rctGroup); // (可在瀏覽器 F12 主控台偷看分組)
+          // 2. 🟢 根據獨立抓出來的實驗分組 (rctGroup) 控制介面顯示
+          window.currentRctGroup = json.data.rctGroup || 'experimental';
+          console.log("當前受試者分組:", window.currentRctGroup); // (可在瀏覽器 F12 主控台偷看分組)
           
-          if (rctGroup === 'control') {
-            const hideSections = ['secVideo', 'secConsult'];
-            hideSections.forEach(id => {
-               const navBtn = document.querySelector(`a[data-target="${id}"]`);
-               if (navBtn) navBtn.style.display = 'none';
-               const secBlock = document.getElementById(id);
-               if (secBlock) secBlock.style.display = 'none';
+          if (window.currentRctGroup === 'control') {
+            // 控制組：隱藏衛教影片
+            ['secVideo'].forEach(id => {
+               document.querySelector(`a[data-target="${id}"]`)?.style.setProperty('display', 'none');
+               document.getElementById(id)?.style.setProperty('display', 'none');
                
                const idx = SECTION_IDS.indexOf(id);
                if (idx > -1) SECTION_IDS.splice(idx, 1);
             });
+            
+            // 🟢 控制組：不隱藏留言板，但改變標題並隱藏「預約」與「專家選擇」
+            const consultTab = document.querySelector(`a[data-target="secConsult"]`);
+            if (consultTab) consultTab.textContent = '聯絡我們 (留言板)';
+            
+            const consultHeader = document.querySelector('#secConsult h2');
+            if (consultHeader) consultHeader.textContent = '聯絡我們 (系統留言板)';
+            
+            const hideIds = ['roleTitle', 'roleField', 'reserveTitle', 'reserveOpt1', 'reserveOpt2', 'btnSaveReserve'];
+            hideIds.forEach(id => {
+              const el = document.getElementById(id);
+              if (el) el.style.display = 'none';
+            });
           }
+
         } else {
-          // 找不到資料時的防呆提示
+          // 🟢 找不到資料時的防呆提示 (加回來了！)
           if (scoresEl) {
             scoresEl.innerHTML = '尚未在雲端找到您的 TTM 測驗結果。<br><a href="ttm.html" style="color: #1976D2; text-decoration: underline; font-weight: bold; display: inline-block; margin-top: 8px;">👉 點此補做 TTM 測驗</a>';
           }
         }
       } catch(e) { 
         console.error("載入 TTM 發生錯誤:", e);
-        if (scoresEl) scoresEl.innerHTML = '<span style="color:red;">無法連線至雲端，請檢查後端是否正常運作。</span>';
+        // 🟢 網路斷線或後端錯誤時的防呆提示 (加回來了！)
+        if (scoresEl) {
+          scoresEl.innerHTML = '<span style="color:red;">無法連線至雲端，請檢查後端是否正常運作。</span>';
+        }
       }
     }
+    
     loadTTM();
 
     /* ================ (二) 血糖即時回饋與紀錄 ================ */
@@ -1607,68 +1626,76 @@ async function loadReserve(){
 document.getElementById('btnSaveReserve')?.addEventListener('click', saveReserve);
 loadReserve();
 
-/* --- 留言板區塊 --- */
-function roleLabel(v){
-  const map = { doctor:'醫師', nurse:'護理師', dietitian:'營養師', pharmacist:'藥師', research:'研究團隊' };
-  return map[v] || v || '';
-}
+    /* --- 留言板區塊 --- */
+    function roleLabel(v){
+      const map = { doctor:'醫師', nurse:'護理師', dietitian:'營養師', pharmacist:'藥師', research:'研究團隊' };
+      return map[v] || v || '';
+    }
 
-async function renderConsultList(){
-  const box = document.getElementById('consultList');
-  if(!box) return;
-  try {
-    const res = await fetch(`${API_BASE}/consults/${currentUserId}`);
-    const json = await res.json();
-    const list = json.data || [];
-    if(list.length === 0){ box.textContent = '目前沒有留言'; return; }
+    async function renderConsultList(){
+      const box = document.getElementById('consultList');
+      if(!box) return;
+      try {
+        const res = await fetch(`${API_BASE}/consults/${currentUserId}`);
+        const json = await res.json();
+        const list = json.data || [];
+        if(list.length === 0){ box.textContent = '目前沒有留言'; return; }
 
-    box.innerHTML = list.map(item => `
-      <div class="list-item">
-        <div>
-          <div><strong>${roleLabel(item.role)}</strong></div>
-          <div class="meta">${new Date(item.createdAt).toLocaleString()} ${item.consultTime ? '· 預約：'+new Date(item.consultTime).toLocaleString() : ''}</div>
-          <div style="margin-top:6px;">${item.message}</div>
-        </div>
-      </div>
-    `).join('');
-  } catch(e) { box.textContent = '無法讀取留言'; }
-}
+        box.innerHTML = list.map(item => {
+          // 🟢 檢查是否有管理員回覆
+          const replyHTML = item.reply ? `
+            <div style="margin-top:12px; padding:12px; background:#e8f5e9; border-left:4px solid #2E7D32; border-radius:6px;">
+              <div style="font-weight:bold; color:#1B5E20; font-size:0.9em; margin-bottom:4px;">👨‍⚕️ 管理員/團隊回覆 (${new Date(item.repliedAt).toLocaleString()})：</div>
+              <div style="color:#333; line-height: 1.5;">${item.reply}</div>
+            </div>
+          ` : '';
 
-// 發送留言主程式
-async function sendConsult(){
-  const role = document.getElementById('role')?.value || 'patient';
-  const message = document.getElementById('consultMsg')?.value.trim() || '';
-  const consultTime = document.getElementById('consultTime')?.value || ''; 
-  const isReserve = document.getElementById('reserveYes')?.checked;
+          return `
+          <div class="list-item" style="flex-direction: column; align-items: stretch; background: #fff;">
+            <div style="display: flex; justify-content: space-between;">
+              <strong>${window.currentRctGroup === 'control' ? '聯絡系統' : roleLabel(item.role)}</strong>
+              <span class="meta">${new Date(item.createdAt).toLocaleString()}</span>
+            </div>
+            ${item.consultTime ? `<div class="meta" style="color:var(--blue);">📅 預約時段：${new Date(item.consultTime).toLocaleString()}</div>` : ''}
+            <div style="margin-top:8px; line-height:1.5;">${item.message}</div>
+            ${replyHTML}
+          </div>
+        `}).join('');
+      } catch(e) { box.textContent = '無法讀取留言'; }
+    }
 
-  if(!message){ toast('請先輸入留言內容', 'err'); return; }
+    async function sendConsult(){
+      const isControl = (window.currentRctGroup === 'control');
+      
+      // 控制組強制將對象設定為 research，並清空預約時間
+      const role = isControl ? 'research' : (document.getElementById('role')?.value || 'patient');
+      const consultTime = isControl ? '' : (document.getElementById('consultTime')?.value || ''); 
+      const isReserve = isControl ? false : document.getElementById('reserveYes')?.checked;
+      const message = document.getElementById('consultMsg')?.value.trim() || '';
 
-  try {
-    // 1. 存入資料庫
-    await fetch(`${API_BASE}/consults`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: currentUserId, role, message, consultTime })
-    });
-    
-    // 2. 更新畫面與統計次數
-    document.getElementById('consultMsg').value = ''; 
-    const cnt = Number(localStorage.getItem('countMsg') || '0') + 1;
-    localStorage.setItem('countMsg', cnt);
-    if (typeof updateCounters === 'function') updateCounters();
+      if(!message){ toast('請先輸入留言內容', 'err'); return; }
 
-       //  這裡也補上同一行：立刻同步統計資料到雲端！
-       if (typeof syncStatsToDB === 'function') syncStatsToDB();
+      try {
+        // 1. 存入資料庫
+        await fetch(`${API_BASE}/consults`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUserId, role, message, consultTime })
+        });
+        // 2. 更新畫面與統計次數
+        document.getElementById('consultMsg').value = ''; 
+        const cnt = Number(localStorage.getItem('countMsg') || '0') + 1;
+        localStorage.setItem('countMsg', cnt);
+        if (typeof updateCounters === 'function') updateCounters();
+        //  立刻同步統計資料到雲端！
+        if (typeof syncStatsToDB === 'function') syncStatsToDB();
 
-    renderConsultList(); 
-    toast('留言已儲存，正在發送郵件...', 'ok');
-    
-    // 3. 呼叫背景寄信 API
-    sendEmailToProfessional(role, message, isReserve, consultTime);
-
-  } catch(e) { 
-    toast('送出失敗', 'err'); 
-  }
-}
+        renderConsultList(); 
+        toast('留言已送出', 'ok');
+        
+        // 3. 呼叫背景寄信 API
+        sendEmailToProfessional(role, message, isReserve, consultTime);
+      } catch(e) { toast('送出失敗', 'err'); }
+    }
 
 // 背景寄信專屬函數 (呼叫後端 API)
 async function sendEmailToProfessional(role, message, isReserve, consultTime) {

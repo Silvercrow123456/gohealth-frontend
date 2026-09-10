@@ -34,6 +34,63 @@
       // 直接讓瀏覽器打開這個 API 網址，瀏覽器就會自動觸發下載檔案！
       window.open(`${API_BASE}/export-excel`, '_blank');
     }
+
+    async function loadAllMessages() {
+      const box = document.getElementById('adminMsgList');
+      try {
+        const res = await fetch(`${API_BASE}/admin/consults`);
+        const json = await res.json();
+        
+        if (!json.data || json.data.length === 0) {
+          box.innerHTML = "目前沒有任何病患留言。";
+          return;
+        }
+
+        box.innerHTML = json.data.map(item => `
+          <div class="msg-box">
+            <div class="msg-header">
+              <span>👤 病患帳號：${item.userId} （對象：${item.role}）</span>
+              <span style="color:#666; font-size: 0.9em;">${new Date(item.createdAt).toLocaleString()}</span>
+            </div>
+            ${item.consultTime ? `<div style="color:#1976D2; font-weight:bold; margin-bottom:8px;">📅 預約時段：${new Date(item.consultTime).toLocaleString()}</div>` : ''}
+            <div style="font-size: 16px; line-height: 1.5; margin-bottom: 10px;">${item.message}</div>
+            
+            <div class="reply-area">
+              <label style="font-weight:bold; color:#2E7D32;">管理員回覆：</label>
+              <textarea id="reply-${item._id}" rows="3" placeholder="在此輸入回覆給病患的話...">${item.reply || ''}</textarea>
+              <button onclick="submitReply('${item._id}')" style="font-size: 14px; padding: 8px 16px;">送出 / 更新回覆</button>
+              ${item.reply ? `<span style="font-size: 12px; color: #666; margin-left: 10px;">已於 ${new Date(item.repliedAt).toLocaleString()} 回覆</span>` : ''}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        box.innerHTML = "無法載入留言板資料。";
+      }
+    }
+
+    async function submitReply(msgId) {
+      const replyText = document.getElementById(`reply-${msgId}`).value.trim();
+      if (!replyText) { alert("請先輸入回覆內容！"); return; }
+
+      try {
+        const res = await fetch(`${API_BASE}/admin/consults/${msgId}/reply`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reply: replyText })
+        });
+        
+        if (res.ok) {
+          alert('回覆成功！病患將會在自己的畫面上看到此回覆。');
+          loadAllMessages(); // 重新整理列表
+        } else {
+          alert('回覆失敗。');
+        }
+      } catch (e) {
+        alert('網路錯誤。');
+      }
+    }
+
+    loadAllMessages();
   </script>
 </body>
 </html>
