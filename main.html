@@ -803,7 +803,7 @@
 </script>
 
   <script>
-    /* ================ 全域變數與工具 (請移到最上方) ================ */
+    /* ================ 全域變數與工具 ================ */
     const $ = (id)=>document.getElementById(id);
     const fmt2 = (n)=> n.toString().padStart(2,'0');
     function mmss(sec){
@@ -813,24 +813,30 @@
     }
     function nowISO(){ return new Date().toISOString(); }
 
-    // 【關鍵修正】把 API 網址跟使用者 ID 移到最前面，讓所有功能都讀得到！
+    // 🟢 終極防彈版 ID 產生器 (保證在任何舊手機或本機環境都不會當機)
+    function generateUUID() {
+      try {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+          return crypto.randomUUID();
+        }
+      } catch(e) {} // 如果瀏覽器耍賴報錯，就默默攔截下來
+      return 'id-' + Date.now() + '-' + Math.floor(Math.random() * 10000); // 備用方案
+    }
+
     const API_BASE = 'https://gohealth-backend.vercel.app/api'; 
     const currentUserId = localStorage.getItem('currentEmail') || 'guest@example.com';
-
-    // 🟢 設定一個全域變數，紀錄病患是哪一組，方便後面發送留言時判斷
     window.currentRctGroup = 'experimental'; 
 
-    /* ================ (一) 讀取 TTM 摘要與實驗分組 (最新完整防呆版) ================ */
+    /* ================ (一) 讀取 TTM 摘要與實驗分組 ================ */
     async function loadTTM() {
       const scoresEl = document.getElementById('ttmScoresText');
-      if (scoresEl) scoresEl.innerHTML = '讀取中...'; // 給予讀取提示
+      if (scoresEl) scoresEl.innerHTML = '讀取中...'; 
 
       try {
         const res = await fetch(`${API_BASE}/ttm/${currentUserId}`);
         const json = await res.json();
 
         if (json.success && json.data && json.data.scores) {
-          // 1. 顯示 TTM 各題分數與總分
           const scoresString = json.data.scores.join('、');
           if (scoresEl) {
              scoresEl.innerHTML = `
@@ -839,21 +845,16 @@
              `;
           }
 
-          // 2. 🟢 根據獨立抓出來的實驗分組 (rctGroup) 控制介面顯示
           window.currentRctGroup = json.data.rctGroup || 'experimental';
-          console.log("當前受試者分組:", window.currentRctGroup); // (可在瀏覽器 F12 主控台偷看分組)
           
           if (window.currentRctGroup === 'control') {
-            // 控制組：隱藏衛教影片
             ['secVideo'].forEach(id => {
                document.querySelector(`a[data-target="${id}"]`)?.style.setProperty('display', 'none');
                document.getElementById(id)?.style.setProperty('display', 'none');
-               
                const idx = SECTION_IDS.indexOf(id);
                if (idx > -1) SECTION_IDS.splice(idx, 1);
             });
             
-            // 🟢 控制組：不隱藏留言板，但改變標題並隱藏「預約」與「專家選擇」
             const consultTab = document.querySelector(`a[data-target="secConsult"]`);
             if (consultTab) consultTab.textContent = '聯絡我們 (留言板)';
             
@@ -868,24 +869,17 @@
           }
 
         } else {
-          // 🟢 找不到資料時的防呆提示 (加回來了！)
           if (scoresEl) {
             scoresEl.innerHTML = '尚未在雲端找到您的 TTM 測驗結果。<br><a href="ttm.html" style="color: #1976D2; text-decoration: underline; font-weight: bold; display: inline-block; margin-top: 8px;">👉 點此補做 TTM 測驗</a>';
           }
         }
       } catch(e) { 
-        console.error("載入 TTM 發生錯誤:", e);
-        // 🟢 網路斷線或後端錯誤時的防呆提示 (加回來了！)
-        if (scoresEl) {
-          scoresEl.innerHTML = '<span style="color:red;">無法連線至雲端，請檢查後端是否正常運作。</span>';
-        }
+        if (scoresEl) scoresEl.innerHTML = '<span style="color:red;">無法連線至雲端，請檢查後端是否正常運作。</span>';
       }
     }
-    
     loadTTM();
 
     /* ================ (二) 血糖即時回饋與紀錄 ================ */
-    // 建立一個變數來暫存從資料庫抓回來的紀錄，給「分享」按鈕使用
     let currentGlucoseLogs = []; 
 
     function evalGlucose(v){
@@ -904,36 +898,22 @@
 
     function renderGlucoseLight(v){
       const info = evalGlucose(v);
-      
-      // 放大「紅/黃/綠/藍燈」那顆膠囊標籤
       $('glucoseLight').innerHTML = `<span class="chip ${info.cls}" style="font-size: 1.1em; padding: 0.4em 0.8em;">${info.label}</span>`;
       
       const ad = $('glucoseAdvice');
       if(info.advice){
         ad.style.display='block';
         ad.textContent = info.advice;
-        
-        // 🟢 根據不同燈號，動態改變警示框的背景與文字顏色
         if (info.cls === 'red') {
-           ad.style.color = '#D32F2F'; // 紅字
-           ad.style.borderColor = '#D32F2F';
-           ad.style.backgroundColor = '#ffebee'; // 淺紅底
+           ad.style.color = '#D32F2F'; ad.style.borderColor = '#D32F2F'; ad.style.backgroundColor = '#ffebee';
         } else if (info.cls === 'blue') {
-           ad.style.color = '#1976D2'; // 藍字
-           ad.style.borderColor = '#1976D2';
-           ad.style.backgroundColor = '#e3f2fd'; // 淺藍底
+           ad.style.color = '#1976D2'; ad.style.borderColor = '#1976D2'; ad.style.backgroundColor = '#e3f2fd';
         } else if (info.cls === 'yellow') {
-           ad.style.color = '#E65100'; // 深橘黃字 (確保白底上清楚)
-           ad.style.borderColor = '#FBC02D';
-           ad.style.backgroundColor = '#fffde7'; // 淺黃底
+           ad.style.color = '#E65100'; ad.style.borderColor = '#FBC02D'; ad.style.backgroundColor = '#fffde7';
         } else if (info.cls === 'green') {
-           ad.style.color = '#2E7D32'; // 綠字
-           ad.style.borderColor = '#66BB6A';
-           ad.style.backgroundColor = '#e8f5e9'; // 淺綠底
+           ad.style.color = '#2E7D32'; ad.style.borderColor = '#66BB6A'; ad.style.backgroundColor = '#e8f5e9';
         } else {
-           ad.style.color = '#333';
-           ad.style.borderColor = 'var(--border)';
-           ad.style.backgroundColor = '#fafafa';
+           ad.style.color = '#333'; ad.style.borderColor = 'var(--border)'; ad.style.backgroundColor = '#fafafa';
         }
       }else{
         ad.style.display='none';
@@ -946,23 +926,18 @@
       renderGlucoseLight(isNaN(val)? null: val);
     });
 
-    // 1. 讀取 (從 MongoDB 抓取資料)
     async function loadGlucoseHistory(){
       const box = $('glucoseHistory');
       box.innerHTML = `<div class="list-item"><span class="meta">載入中...</span></div>`;
-      
       try {
         const response = await fetch(`${API_BASE}/glucose/${currentUserId}`);
         const result = await response.json();
-        
-        currentGlucoseLogs = result.data || []; // 更新暫存，供分享使用
+        currentGlucoseLogs = result.data || []; 
 
         if(currentGlucoseLogs.length === 0){
           box.innerHTML = `<div class="list-item"><span class="meta">目前沒有紀錄</span></div>`;
           return;
         }
-
-        // 渲染畫面 (注意 MongoDB 的 _id，時間是 measuredAt)
         box.innerHTML = currentGlucoseLogs.map(item => {
           const tag = evalGlucose(item.value);
           return `
@@ -978,75 +953,44 @@
             </div>`;
         }).join('');
 
-        // 綁定分享與刪除按鈕
-        box.querySelectorAll('.btnShareRow').forEach(b => {
-          b.onclick = () => shareGlucoseById(b.getAttribute('data-id'));
-        });
-        box.querySelectorAll('.btnDelRow').forEach(b => {
-          b.onclick = () => deleteGlucoseById(b.getAttribute('data-id'));
-        });
+        box.querySelectorAll('.btnShareRow').forEach(b => b.onclick = () => shareGlucoseById(b.getAttribute('data-id')));
+        box.querySelectorAll('.btnDelRow').forEach(b => b.onclick = () => deleteGlucoseById(b.getAttribute('data-id')));
       } catch (error) {
-        console.error(error);
         box.innerHTML = `<div class="list-item"><span class="meta" style="color:red;">載入失敗，請確認後端 Node.js 是否有開啟</span></div>`;
       }
     }
 
-    // 2. 儲存 (新增到 MongoDB)
     async function saveGlucose(){
       const v = Number($('glucose').value);
       if(isNaN(v)){ toast('請輸入血糖數值','err'); return; }
       const t = $('glucoseTime').value ? new Date($('glucoseTime').value) : new Date();
 
-      const payload = {
-        userId: currentUserId,
-        value: v,
-        measuredAt: t.toISOString()
-      };
-
       try {
         const response = await fetch(`${API_BASE}/glucose`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUserId, value: v, measuredAt: t.toISOString() })
         });
 
         if(response.ok) {
           toast('血糖紀錄已儲存至雲端','ok');
-          $('glucose').value = ''; 
-          $('glucoseTime').value = ''; 
-
-          const cnt = Number(localStorage.getItem('countGlu') || '0') + 1;
-          localStorage.setItem('countGlu', cnt);
+          $('glucose').value = ''; $('glucoseTime').value = ''; 
+          localStorage.setItem('countGlu', Number(localStorage.getItem('countGlu') || '0') + 1);
           if (typeof updateCounters === 'function') updateCounters();
-
-          //  這裡也補上同一行：立刻同步統計資料到雲端！
-            if (typeof syncStatsToDB === 'function') syncStatsToDB();
-
-          loadGlucoseHistory();    // 重新從資料庫抓取更新
+          if (typeof syncStatsToDB === 'function') syncStatsToDB();
+          loadGlucoseHistory();
           renderGlucoseLight(null);
-        } else {
-          toast('儲存失敗','err');
-        }
-      } catch(error) {
-        toast('網路錯誤，請確認後端是否開啟','err');
-      }
+        } else { toast('儲存失敗','err'); }
+      } catch(error) { toast('網路錯誤','err'); }
     }
 
-    // 3. 刪除 (透過 API 刪除 MongoDB 的資料)
     async function deleteGlucoseById(id){
       if(!confirm('確定要刪除這筆紀錄嗎？')) return;
       try {
         const response = await fetch(`${API_BASE}/glucose/${id}`, { method: 'DELETE' });
-        if(response.ok){
-          toast('已刪除','ok');
-          loadGlucoseHistory();
-        }
-      } catch(error) {
-        toast('刪除失敗','err');
-      }
+        if(response.ok){ toast('已刪除','ok'); loadGlucoseHistory(); }
+      } catch(error) { toast('刪除失敗','err'); }
     }
 
-    // 4. 清除所有 (逐一呼叫 API 刪除)
     async function clearGlucose(){
       if(!confirm('確定要清除所有血糖紀錄？(此操作無法復原)')) return;
       try {
@@ -1055,19 +999,13 @@
         }
         toast('已清除所有紀錄', 'ok');
         loadGlucoseHistory();
-      } catch(error) {
-        toast('清除時發生錯誤', 'err');
-      }
+      } catch(error) { toast('清除時發生錯誤', 'err'); }
     }
 
-    /* --- 分享功能模組 (改從 currentGlucoseLogs 讀取) --- */
     async function shareText(subject, text){
       try{
-        if(navigator.share){
-          await navigator.share({title:subject, text});
-        }else{
-          window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-        }
+        if(navigator.share){ await navigator.share({title:subject, text});
+        }else{ window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`; }
       }catch(e){}
     }
 
@@ -1077,9 +1015,7 @@
     }
 
     async function copyToClipboard(text){
-      try{
-        await navigator.clipboard.writeText(text);
-        return true;
+      try{ await navigator.clipboard.writeText(text); return true;
       }catch(e){
         const ta = document.createElement('textarea');
         ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
@@ -1087,700 +1023,498 @@
       }
     }
 
-    function isMobileDevice(){
-      return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    }
+    function isMobileDevice(){ return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent); }
 
-    // 分享最新一筆
     function shareGlucoseLatest(){
       if(currentGlucoseLogs.length===0){ toast('目前沒有可分享的血糖紀錄','err'); return; }
       const latest = currentGlucoseLogs[0];
       const tag = evalGlucose(latest.value);
       const emails = $('careEmails').value || '';
       const subject = `血糖更新：${latest.value} mg/dL（${tag.label}）`;
-      const body = `最新血糖：${latest.value} mg/dL（${tag.label}）\n量測時間：${new Date(latest.measuredAt).toLocaleString()}\n回饋建議：${tag.advice}\n\n（此訊息由個案於自我管理平台分享）`;
-      
-      if (emails.trim()){
-        window.location.href = `mailto:${encodeURIComponent(emails)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      } else {
-        shareText(subject, body);
-      }
+      const body = buildGlucoseShareText(latest);
+      if (emails.trim()){ window.location.href = `mailto:${encodeURIComponent(emails)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      } else { shareText(subject, body); }
     }
 
-    // LINE 分享最新一筆
     async function shareLatestToLINE(){
       if(currentGlucoseLogs.length===0){ toast('目前沒有可分享的血糖紀錄','err'); return; }
       const text = buildGlucoseShareText(currentGlucoseLogs[0]);
-
-      if(isMobileDevice()){
-        window.location.href = `line://msg/text/${encodeURIComponent(text)}`;
+      if(isMobileDevice()){ window.location.href = `line://msg/text/${encodeURIComponent(text)}`;
       } else {
-        await copyToClipboard(text);
-        alert('已複製血糖分享文字，請打開 LINE 後貼上即可分享。');
+        await copyToClipboard(text); alert('已複製血糖分享文字，請打開 LINE 後貼上即可分享。');
       }
     }
 
-    // 分享指定一筆
     function shareGlucoseById(id){
       const item = currentGlucoseLogs.find(x => x._id === id);
       if(!item){ toast('找不到該筆紀錄','err'); return; }
       const tag = evalGlucose(item.value);
       const emails = $('careEmails').value || '';
       const subject = `血糖更新：${item.value} mg/dL（${tag.label}）`;
-      const body = `血糖：${item.value} mg/dL（${tag.label}）\n量測時間：${new Date(item.measuredAt).toLocaleString()}\n回饋建議：${tag.advice}`;
-      
-      if (emails.trim()){
-        window.location.href = `mailto:${encodeURIComponent(emails)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      } else {
-        shareText(subject, body);
-      }
+      const body = buildGlucoseShareText(item);
+      if (emails.trim()){ window.location.href = `mailto:${encodeURIComponent(emails)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      } else { shareText(subject, body); }
     }
 
-    // 綁定按鈕事件
     $('saveGlucoseBtn').onclick = saveGlucose;
     $('shareGlucoseBtn').onclick = shareGlucoseLatest;
     $('clearGlucoseBtn').onclick = clearGlucose;
     $('lineShareGlucoseBtn').onclick = shareLatestToLINE;
-
-    // 網頁載入時立刻讀取資料
     loadGlucoseHistory();
     renderGlucoseLight(null);
-    
-    /* ================ (二) 結束 ================ */  
 
-  /* ================ (三) 生理/生化：保存與清除 (API 整合版) ================ */
-  async function loadBiochem() {
-    try {
-      const res = await fetch(`${API_BASE}/biochem/${currentUserId}`);
-      const json = await res.json();
-      const historyBox = document.getElementById('biochemHistory');
-      
-      if (json.data && json.data.length > 0) {
-        const list = json.data;
-        const latest = list[0]; // 把最新的那筆資料自動填入輸入框
-
-        $('sex').value = latest.sex || 'male';
-        $('height').value = latest.height || ''; $('weight').value = latest.weight || '';
-        $('waist').value = latest.waist || ''; $('hip').value = latest.hip || '';
-        $('creatinine').value = latest.creatinine || ''; $('BUN').value = latest.BUN || '';
-        $('urineProtein').value = latest.urineProtein || ''; $('ast').value = latest.ast || '';
-        $('alt').value = latest.alt || ''; $('hba1c').value = latest.hba1c || '';
-        $('tc').value = latest.tc || ''; $('tg').value = latest.tg || '';
-        $('hdl').value = latest.hdl || ''; $('ldl').value = latest.ldl || '';
-        refreshBMIOnly(); 
+    /* ================ (三) 生理/生化：保存與清除 ================ */
+    async function loadBiochem() {
+      try {
+        const res = await fetch(`${API_BASE}/biochem/${currentUserId}`);
+        const json = await res.json();
+        const historyBox = document.getElementById('biochemHistory');
         
-        // 渲染下方的歷史紀錄列表 (加入單筆刪除按鈕)
-        historyBox.innerHTML = list.map(item => {
-          const d = new Date(item.createdAt);
-          const dateStr = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; 
+        if (json.data && json.data.length > 0) {
+          const list = json.data;
+          const latest = list[0]; 
+
+          $('sex').value = latest.sex || 'male';
+          $('height').value = latest.height || ''; $('weight').value = latest.weight || '';
+          $('waist').value = latest.waist || ''; $('hip').value = latest.hip || '';
+          $('creatinine').value = latest.creatinine || ''; $('BUN').value = latest.BUN || '';
+          $('urineProtein').value = latest.urineProtein || ''; $('ast').value = latest.ast || '';
+          $('alt').value = latest.alt || ''; $('hba1c').value = latest.hba1c || '';
+          $('tc').value = latest.tc || ''; $('tg').value = latest.tg || '';
+          $('hdl').value = latest.hdl || ''; $('ldl').value = latest.ldl || '';
+          refreshBMIOnly(); 
           
-          let details = '';
-          if(item.height) details += `<div>身高: ${item.height} cm</div>`;
-          if(item.weight) details += `<div>體重: ${item.weight} kg</div>`;
-          if(item.waist) details += `<div>腰圍: ${item.waist} cm</div>`;
-          if(item.hip) details += `<div>臀圍: ${item.hip} cm</div>`;
-          if(item.hba1c) details += `<div><strong style="color:var(--red);">HbA1c: ${item.hba1c} %</strong></div>`;
-          if(item.creatinine) details += `<div>Creatinine: ${item.creatinine}</div>`;
-          if(item.BUN) details += `<div>BUN: ${item.BUN}</div>`;
-          if(item.urineProtein) details += `<div>尿蛋白: ${item.urineProtein}</div>`;
-          if(item.ast) details += `<div>AST: ${item.ast}</div>`;
-          if(item.alt) details += `<div>ALT: ${item.alt}</div>`;
-          if(item.tc) details += `<div>TC: ${item.tc}</div>`;
-          if(item.tg) details += `<div>TG: ${item.tg}</div>`;
-          if(item.hdl) details += `<div>HDL: ${item.hdl}</div>`;
-          if(item.ldl) details += `<div>LDL: ${item.ldl}</div>`;
+          historyBox.innerHTML = list.map(item => {
+            const d = new Date(item.createdAt);
+            const dateStr = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; 
+            let details = '';
+            if(item.height) details += `<div>身高: ${item.height} cm</div>`;
+            if(item.weight) details += `<div>體重: ${item.weight} kg</div>`;
+            if(item.waist) details += `<div>腰圍: ${item.waist} cm</div>`;
+            if(item.hip) details += `<div>臀圍: ${item.hip} cm</div>`;
+            if(item.hba1c) details += `<div><strong style="color:var(--red);">HbA1c: ${item.hba1c} %</strong></div>`;
+            if(item.creatinine) details += `<div>Creatinine: ${item.creatinine}</div>`;
+            if(item.BUN) details += `<div>BUN: ${item.BUN}</div>`;
+            if(item.urineProtein) details += `<div>尿蛋白: ${item.urineProtein}</div>`;
+            if(item.ast) details += `<div>AST: ${item.ast}</div>`;
+            if(item.alt) details += `<div>ALT: ${item.alt}</div>`;
+            if(item.tc) details += `<div>TC: ${item.tc}</div>`;
+            if(item.tg) details += `<div>TG: ${item.tg}</div>`;
+            if(item.hdl) details += `<div>HDL: ${item.hdl}</div>`;
+            if(item.ldl) details += `<div>LDL: ${item.ldl}</div>`;
 
-          return `
-            <div class="list-item" style="flex-direction: column; align-items: flex-start; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; width: 100%;">
-              <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 8px;">
-                <div class="meta" style="font-weight: bold; color: var(--green); font-size: 1.05em;">📅 填寫日期：${dateStr}</div>
-                <!-- 🟢 加入這顆單筆刪除按鈕 -->
-                <button data-id="${item._id}" class="btnDelBioRow" style="background:#9e9e9e; padding: 0.4em 0.8em; font-size: 0.9em;">刪除</button>
+            return `
+              <div class="list-item" style="flex-direction: column; align-items: flex-start; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; width: 100%;">
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 8px;">
+                  <div class="meta" style="font-weight: bold; color: var(--green); font-size: 1.05em;">📅 填寫日期：${dateStr}</div>
+                  <button data-id="${item._id}" class="btnDelBioRow" style="background:#9e9e9e; padding: 0.4em 0.8em; font-size: 0.9em;">刪除</button>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; width: 100%; font-size: 0.95em; color: #333;">
+                  ${details || '<div>(無填寫數值)</div>'}
+                </div>
               </div>
-              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; width: 100%; font-size: 0.95em; color: #333;">
-                ${details || '<div>(無填寫數值)</div>'}
-              </div>
-            </div>
-          `;
-        }).join('');
+            `;
+          }).join('');
 
-        // 🟢 綁定單筆刪除按鈕的點擊事件
-        historyBox.querySelectorAll('.btnDelBioRow').forEach(b => {
-          b.onclick = () => deleteBiochemById(b.getAttribute('data-id'));
+          historyBox.querySelectorAll('.btnDelBioRow').forEach(b => {
+            b.onclick = () => deleteBiochemById(b.getAttribute('data-id'));
+          });
+        } else {
+          historyBox.innerHTML = '<div class="list-item"><span class="meta">目前尚無檢驗紀錄</span></div>';
+        }
+      } catch (e) {}
+    }
+
+    async function saveBiochem(){
+      const payload = {
+        userId: currentUserId,
+        sex: $('sex').value, height:$('height').value, weight:$('weight').value, waist:$('waist').value, hip:$('hip').value,
+        creatinine:$('creatinine').value, BUN:$('BUN').value, urineProtein:$('urineProtein').value,
+        ast:$('ast').value, alt:$('alt').value, hba1c:$('hba1c').value,
+        tc:$('tc').value, tg:$('tg').value, hdl:$('hdl').value, ldl:$('ldl').value
+      };
+      try {
+        await fetch(`${API_BASE}/biochem`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         });
-
-      } else {
-        historyBox.innerHTML = '<div class="list-item"><span class="meta">目前尚無檢驗紀錄</span></div>';
-      }
-    } catch (e) { 
-      console.error('無法載入生理數據'); 
+        $('bioResult').textContent='已儲存。'; $('bioResult').className='result ok';
+        refreshBMIOnly(); loadBiochem(); toast('生理數值已儲存','ok');
+      } catch(e) { toast('儲存失敗', 'err'); }
     }
-  }
 
-  async function saveBiochem(){
-    const payload = {
-      userId: currentUserId,
-      sex: $('sex').value,
-      height:$('height').value, weight:$('weight').value, waist:$('waist').value, hip:$('hip').value,
-      creatinine:$('creatinine').value, BUN:$('BUN').value, urineProtein:$('urineProtein').value,
-      ast:$('ast').value, alt:$('alt').value, hba1c:$('hba1c').value,
-      tc:$('tc').value, tg:$('tg').value, hdl:$('hdl').value, ldl:$('ldl').value
+    async function deleteBiochemById(id) {
+      if(!confirm('確定要刪除這筆紀錄嗎？')) return;
+      try {
+        const res = await fetch(`${API_BASE}/biochem/item/${id}`, { method: 'DELETE' });
+        if (res.ok) { toast('已刪除該筆紀錄', 'ok'); loadBiochem(); 
+        } else { toast('刪除失敗', 'err'); }
+      } catch(e) { toast('刪除失敗', 'err'); }
+    }
+
+    async function clearBiochem(){
+      if(!confirm('確定清除「所有」已儲存的歷史數值嗎？（此動作無法復原）')) return;
+      try {
+        await fetch(`${API_BASE}/biochem/${currentUserId}`, { method: 'DELETE' });
+        document.querySelectorAll('#secBiochem input').forEach(el => el.value = '');
+        $('bioResult').textContent='已清除所有歷史紀錄。'; $('bioResult').className='result';
+        refreshBMIOnly(); loadBiochem(); toast('已清除全部紀錄', 'ok');
+      } catch(e) { toast('清除失敗', 'err'); }
+    }
+
+    $('saveBiochemBtn').onclick = saveBiochem;
+    $('clearBiochemBtn').onclick = clearBiochem;
+    loadBiochem();
+
+    /* ====== BMI ====== */
+    function toNum(v){ const n = Number(v); return isNaN(n) ? null : n; }
+    function computeBMI(hCm, wKg){
+      if(!hCm || !wKg) return null;
+      const m = hCm / 100;
+      if(m <= 0) return null;
+      return wKg / (m * m);
+    }
+    const BMI_RULES = {
+      male: [{ max: 18.5, label: '體重過輕', cls: 'pill' }, { max: 24, label: '正常', cls: 'pill' }, { max: 27, label: '過重', cls: 'pill' }, { max: Infinity, label: '肥胖', cls: 'pill' }],
+      female: [{ max: 18.5, label: '體重過輕', cls: 'pill' }, { max: 24, label: '正常', cls: 'pill' }, { max: 27, label: '過重', cls: 'pill' }, { max: Infinity, label: '肥胖', cls: 'pill' }]
     };
-    try {
-      await fetch(`${API_BASE}/biochem`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    function bmiStatusBySex(sex, bmi){
+      const rules = BMI_RULES[sex] || BMI_RULES.male;
+      for(const r of rules) if(bmi < r.max) return { label: r.label, cls: r.cls };
+      return { label: '—', cls: 'pill' };
+    }
+    function round1(x){ return Math.round(x * 10) / 10; }
+    function refreshBMIOnly(){
+      const sex = (document.getElementById('sex')?.value) || 'male';
+      const h = toNum(document.getElementById('height')?.value);
+      const w = toNum(document.getElementById('weight')?.value);
+      const bmi = computeBMI(h, w);
+      const elVal  = document.getElementById('bmi_value');
+      const elTag  = document.getElementById('bmi_tag');
+      const elNote = document.getElementById('bmi_note');
+      if(bmi == null){
+        elVal.textContent = '—'; elTag.textContent = '—'; elNote.textContent = '請輸入身高與體重以計算 BMI'; return;
+      }
+      const stat = bmiStatusBySex(sex, bmi);
+      elVal.textContent = round1(bmi); elTag.textContent = stat.label; elNote.textContent = '分級依衛福部成人 BMI 標準';
+    }
+    ['sex','height','weight'].forEach(id=>{ const el = document.getElementById(id); if(el) el.addEventListener('input', refreshBMIOnly); });
+    refreshBMIOnly();
+
+    /* ====== 熱量估算 ====== */
+    function kcalPerKgSimple(activity){
+      const map = { bed:23, light:27, moderate:32, heavy:37 };
+      return map[activity] || 27;
+    }
+    function calcKcal(){
+      const w = Number(document.getElementById('weight')?.value);
+      if(!w){
+        const box = document.getElementById('kcalResult'); box.className = 'result err'; box.textContent = '請先輸入體重'; return;
+      }
+      const act = (document.querySelector('input[name="act"]:checked')||{}).value || 'light';
+      const perKg = kcalPerKgSimple(act);
+      const kcal = Math.round(perKg * w);
+      const box = document.getElementById('kcalResult');
+      box.className = 'result';
+      box.innerHTML = `建議熱量：<strong>${kcal}</strong> 大卡/天　<span class="muted">（每公斤體重 <strong>${perKg}</strong> 大卡 × 體重 <strong>${w}</strong> kg）</span>`;
+    }
+    document.getElementById('calcKcalBtn').addEventListener('click', calcKcal);
+
+
+    /* ============ (四) 血糖監測/回診提醒 (純時間版) ============ */
+    function parseRem(val) {
+      if (!val) return null;
+      const parts = val.split('|');
+      const time = parts[0];
+      if (!time) return null;
+      const days = (parts.length > 1 && parts[1] !== "") ? parts[1].split(',').map(Number) : [];
+      return { time, days };
+    }
+
+    function encodeRem(timeId, daysName) {
+      const t = document.getElementById(timeId).value;
+      if (!t) return '';
+      const cbs = Array.from(document.querySelectorAll(`input[name="${daysName}"]:checked`));
+      if (cbs.length === 0) return ''; 
+      const days = cbs.map(cb => cb.value).join(',');
+      return `${t}|${days}`;
+    }
+
+    function decodeRem(val, timeId, daysName) {
+      document.querySelectorAll(`input[name="${daysName}"]`).forEach(cb => cb.checked = false);
+      document.getElementById(timeId).value = '';
+      if (!val) return;
+      const parsed = parseRem(val);
+      if (!parsed) return;
+      document.getElementById(timeId).value = parsed.time;
+      document.querySelectorAll(`input[name="${daysName}"]`).forEach(cb => {
+        cb.checked = parsed.days.includes(Number(cb.value));
       });
-      $('bioResult').textContent='已儲存。'; $('bioResult').className='result ok';
+    }
+
+    async function loadReminders(){
+      try{
+        const res = await fetch(`${API_BASE}/reminders/${currentUserId}`);
+        const json = await res.json();
+        if(json.data) {
+          decodeRem(json.data.tPreMeal, 'tPreMeal', 'daysPreMeal');
+          decodeRem(json.data.tPostMeal, 'tPostMeal', 'daysPostMeal');
+          decodeRem(json.data.tBedtime, 'tBedtime', 'daysBedtime');
+          document.getElementById('nextAppt').value = json.data.nextAppt || '';
+        }
+      }catch(e){}
+    }
+
+    async function saveReminders(){
+      const payload = {
+        userId: currentUserId,
+        tPreMeal:  encodeRem('tPreMeal', 'daysPreMeal'),
+        tPostMeal: encodeRem('tPostMeal', 'daysPostMeal'),
+        tBedtime:  encodeRem('tBedtime', 'daysBedtime'),
+        nextAppt:  document.getElementById('nextAppt').value || ''
+      };
+      if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+      }
+      try {
+        await fetch(`${API_BASE}/reminders`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        if (typeof syncRemindersCache === 'function') syncRemindersCache();
+        const box = document.getElementById('reminderResult');
+        if(box){ box.textContent = '已儲存提醒設定。'; box.className = 'result ok'; }
+        toast('已儲存提醒設定','ok');
+      } catch(e) { toast('儲存失敗', 'err'); }
+    }
+
+    function pad2(n){ return String(n).padStart(2,'0'); }
+    function icsDateTimeLocal(d){ return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`; }
+
+    function nextOccurrenceForTimeAndDays(hhmm, days) {
+      const [hh, mm] = (hhmm || '00:00').split(':').map(x => parseInt(x, 10));
+      const now = new Date();
+      let d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh || 0, mm || 0, 0);
+      if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 1);
+      if (days && days.length > 0 && days.length < 7) {
+        let attempts = 0;
+        while (!days.includes(d.getDay()) && attempts < 7) { d.setDate(d.getDate() + 1); attempts++; }
+      }
+      return d;
+    }
+
+    function buildICS(rem){
+      const lines = [];
+      const now = new Date();
+      const dtstamp = icsDateTimeLocal(now);
+      const uidBase = generateUUID(); // 🟢 套用防彈版 ID
+
+      lines.push('BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//go Health//Reminders//ZH-TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
+
+      const dailyItems = [
+        { title:'餐前', val: rem.tPreMeal },
+        { title:'餐後', val: rem.tPostMeal },
+        { title:'睡前', val: rem.tBedtime },
+      ];
+
+      dailyItems.forEach((it, idx)=>{
+        const parsed = parseRem(it.val);
+        if(!parsed || !parsed.time || parsed.days.length === 0) return;
+        const start = nextOccurrenceForTimeAndDays(parsed.time, parsed.days);
+        const end = new Date(start.getTime() + 10 * 60000); 
+
+        let rrule = 'RRULE:FREQ=DAILY';
+        if (parsed.days.length > 0 && parsed.days.length < 7) {
+          const dayMap = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+          rrule = `RRULE:FREQ=WEEKLY;BYDAY=${parsed.days.map(d => dayMap[d]).join(',')}`;
+        }
+        lines.push('BEGIN:VEVENT');
+        lines.push(`UID:${uidBase}-glu-${idx}@gohealth`);
+        lines.push(`DTSTAMP:${dtstamp}`);
+        lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
+        lines.push(`DTEND:${icsDateTimeLocal(end)}`);
+        lines.push(rrule); 
+        lines.push(`SUMMARY:血糖提醒：${it.title}量測`);
+        lines.push('DESCRIPTION:由「穩糖圈 go Health」匯出的提醒');
+        lines.push('BEGIN:VALARM');
+        lines.push('TRIGGER:-PT0M'); 
+        lines.push('ACTION:DISPLAY');
+        lines.push(`DESCRIPTION:${it.title}！請記得量測血糖喔！`);
+        lines.push('END:VALARM');
+        lines.push('END:VEVENT');
+      });
+
+      if(rem.nextAppt){
+        const [Y,M,D] = rem.nextAppt.split('-').map(x=>parseInt(x,10));
+        const appt = new Date(Y, (M||1)-1, D||1, 9, 0, 0);
+        lines.push('BEGIN:VEVENT', `UID:${uidBase}-appt@gohealth`, `DTSTAMP:${dtstamp}`, `DTSTART:${icsDateTimeLocal(appt)}`, `DTEND:${icsDateTimeLocal(new Date(appt.getTime()+30*60*1000))}`);
+        lines.push('SUMMARY:回診提醒（糖尿病追蹤）', 'DESCRIPTION:由「穩糖圈 go Health」匯出的回診事件', 'END:VEVENT');
+      }
+      lines.push('END:VCALENDAR');
+      return lines.join('\r\n');
+    }
+
+    function downloadICS(){
+      const rem = {
+        tPreMeal: encodeRem('tPreMeal', 'daysPreMeal'),
+        tPostMeal: encodeRem('tPostMeal', 'daysPostMeal'),
+        tBedtime: encodeRem('tBedtime', 'daysBedtime'),
+        nextAppt: document.getElementById('nextAppt').value || '',
+      };
+      const hasAny = rem.tPreMeal || rem.tPostMeal || rem.tBedtime || rem.nextAppt;
+      if(!hasAny){ toast('請至少填寫一個提醒時間且勾選星期，或回診日期再匯出','err'); return; }
+
+      const ics = buildICS(rem);
+      const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'gohealth-reminders.ics';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 1000);
+      toast('已匯出行事曆檔案 (.ics)','ok');
+    }
+
+    document.getElementById('saveRemindersBtn')?.addEventListener('click', saveReminders);
+    document.getElementById('downloadICSBtn')?.addEventListener('click', downloadICS);
+    loadReminders();
+
+
+    /* ============ (五) 專業諮詢 ============ */
+    function slotToTime(slot){
+      const map = { morning:'09:00', noon:'14:00', evening:'19:00' };
+      return map[slot] || '';
+    }
+
+    function syncConsultTime(){
+      const yes = document.getElementById('reserveYes')?.checked;
+      const hidden = document.getElementById('consultTime');
+      if(!hidden) return;
+      if(!yes){ hidden.value = ''; return; }
+
+      const d = document.getElementById('consultDate')?.value || '';
+      const s = document.getElementById('consultSlot')?.value || '';
+      const t = slotToTime(s);
+
+      if(d && t){
+        const localStr = `${d}T${t}:00`;
+        const iso = new Date(localStr).toISOString();
+        hidden.value = iso;
+      }else{ hidden.value = ''; }
+    }
+
+    function setReserveUI(show){
+      const L = document.getElementById('reserveFieldsL');
+      const R = document.getElementById('reserveFieldsR');
+      const Lab = document.getElementById('reserveLabel');
+
+      if(L) L.style.display = show ? '' : 'none';
+      if(R) R.style.display = show ? '' : 'none';
+      if(Lab) Lab.style.display = show ? '' : 'none';
+
+      if(!show){
+        if(document.getElementById('consultDate')) document.getElementById('consultDate').value = '';
+        if(document.getElementById('consultSlot')) document.getElementById('consultSlot').value = '';
+        syncConsultTime();
+      }
+    }
+
+    function initConsultPanel(){
+      const yes = document.getElementById('reserveYes');
+      const no  = document.getElementById('reserveNo');
+      const date = document.getElementById('consultDate');
+      const slot = document.getElementById('consultSlot');
+
+      if(yes) yes.addEventListener('change', ()=>{ if(yes.checked){ setReserveUI(true); syncConsultTime(); } });
+      if(no)  no.addEventListener('change',  ()=>{ if(no.checked){ setReserveUI(false); } });
+
+      if(date) date.addEventListener('change', syncConsultTime);
+      if(slot) slot.addEventListener('change', syncConsultTime);
+
+      setReserveUI(!!yes?.checked);
+      syncConsultTime();
+    }
+    initConsultPanel();
+
+    function buildConsultICS(consultTimeISO) {
+      if (!consultTimeISO) return '';
+      const start = new Date(consultTimeISO);
+      const end = new Date(start.getTime() + 30 * 60000);
+      const dtstamp = icsDateTimeLocal(new Date());
+      const uidBase = generateUUID(); // 🟢 套用防彈版 ID
       
-      refreshBMIOnly(); 
-      loadBiochem();
-      toast('生理數值已儲存','ok');
-    } catch(e) { toast('儲存失敗', 'err'); }
-  }
-
-  // 🟢 新增：單筆刪除函數
-  async function deleteBiochemById(id) {
-    if(!confirm('確定要刪除這筆紀錄嗎？')) return;
-    try {
-      const res = await fetch(`${API_BASE}/biochem/item/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast('已刪除該筆紀錄', 'ok');
-        loadBiochem(); // 重新載入畫面
-      } else {
-        toast('刪除失敗', 'err');
-      }
-    } catch(e) {
-      toast('刪除失敗', 'err');
-    }
-  }
-
-  async function clearBiochem(){
-    if(!confirm('確定清除「所有」已儲存的歷史數值嗎？（此動作無法復原）')) return;
-    try {
-      await fetch(`${API_BASE}/biochem/${currentUserId}`, { method: 'DELETE' });
-      document.querySelectorAll('#secBiochem input').forEach(el => el.value = '');
-      $('bioResult').textContent='已清除所有歷史紀錄。'; $('bioResult').className='result';
-      refreshBMIOnly(); 
-      loadBiochem(); 
-      toast('已清除全部紀錄', 'ok');
-    } catch(e) { toast('清除失敗', 'err'); }
-  }
-
-  $('saveBiochemBtn').onclick = saveBiochem;
-  $('clearBiochemBtn').onclick = clearBiochem;
-  loadBiochem();
-
-/* ====== BMI：只顯示數值 + 依性別分級 ====== */
-function toNum(v){ const n = Number(v); return isNaN(n) ? null : n; }
-
-function computeBMI(hCm, wKg){
-  if(!hCm || !wKg) return null;
-  const m = hCm / 100;
-  if(m <= 0) return null;
-  return wKg / (m * m);
-}
-
-// 目前男女同一套門檻（衛福部成人 BMI 分類）；若要男女不同，改這裡即可
-const BMI_RULES = {
-  male: [
-    { max: 18.5,      label: '體重過輕', cls: 'pill' },
-    { max: 24,        label: '正常',     cls: 'pill' },
-    { max: 27,        label: '過重',     cls: 'pill' },
-    { max: Infinity,  label: '肥胖',     cls: 'pill' },
-  ],
-  female: [
-    { max: 18.5,      label: '體重過輕', cls: 'pill' },
-    { max: 24,        label: '正常',     cls: 'pill' },
-    { max: 27,        label: '過重',     cls: 'pill' },
-    { max: Infinity,  label: '肥胖',     cls: 'pill' },
-  ],
-};
-
-function bmiStatusBySex(sex, bmi){
-  const rules = BMI_RULES[sex] || BMI_RULES.male;
-  for(const r of rules){
-    if(bmi < r.max) return { label: r.label, cls: r.cls };
-  }
-  return { label: '—', cls: 'pill' };
-}
-
-function round1(x){ return Math.round(x * 10) / 10; }
-
-function refreshBMIOnly(){
-  const sex = (document.getElementById('sex')?.value) || 'male';
-  const h = toNum(document.getElementById('height')?.value);
-  const w = toNum(document.getElementById('weight')?.value);
-
-  const bmi = computeBMI(h, w);
-  const elVal  = document.getElementById('bmi_value');
-  const elTag  = document.getElementById('bmi_tag');
-  const elNote = document.getElementById('bmi_note');
-
-  if(bmi == null){
-    elVal.textContent = '—';
-    elTag.textContent = '—';
-    elNote.textContent = '請輸入身高與體重以計算 BMI';
-    return;
-  }
-
-  const stat = bmiStatusBySex(sex, bmi);
-  elVal.textContent = round1(bmi);
-  elTag.textContent = stat.label;
-  elNote.textContent = '分級依衛福部成人 BMI 標準';
-}
-
-// 身高/體重/性別改動即時更新
-['sex','height','weight'].forEach(id=>{
-  const el = document.getElementById(id);
-  if(el) el.addEventListener('input', refreshBMIOnly);
-});
-
-// 初次載入刷新一次
-refreshBMIOnly();
-
-
-/* ====== 熱量估算：改用「目前體重 × 活動量中值」====== */
-function kcalPerKgSimple(activity){
-  // 中值估算：臥床23、輕度27、中度32、重度37（kcal/kg）
-  const map = { bed:23, light:27, moderate:32, heavy:37 };
-  return map[activity] || 27;
-}
-
-function calcKcal(){
-  const w = Number(document.getElementById('weight')?.value);
-  if(!w){
-    const box = document.getElementById('kcalResult');
-    box.className = 'result err';
-    box.textContent = '請先輸入體重';
-    return;
-  }
-  const act = (document.querySelector('input[name="act"]:checked')||{}).value || 'light';
-  const perKg = kcalPerKgSimple(act);
-  const kcal = Math.round(perKg * w);
-
-  const box = document.getElementById('kcalResult');
-  box.className = 'result';
-  box.innerHTML =
-    `建議熱量：<strong>${kcal}</strong> 大卡/天　` +
-    `<span class="muted">（每公斤體重 <strong>${perKg}</strong> 大卡 × 體重 <strong>${w}</strong> kg）</span>`;
-}
-
-/* 綁定按鈕（僅保留計算建議熱量） */
-document.getElementById('calcKcalBtn').addEventListener('click', calcKcal);
-
-/* 刪除以下舊函式與監聽（已不需要）：
-   - toNum / round1 / computeBMI / computeIdealWeights / bmiTag / autoWtStatus
-   - kcalPerKg（舊版）
-   - refreshIdeal
-   - document.getElementById('calcIdealBtn').addEventListener('click', refreshIdeal);
-   - ['sex','height','weight'] 的 change 監聽
-   - refreshIdeal();
-*/
-
-
-/* ============ (五) 血糖監測/回診提醒 (API 整合版) ============ */
-
-// 🟢 解析時間與星期 (格式: "07:30|1,3,5")
-function parseRem(val) {
-  if (!val) return null;
-  const parts = val.split('|');
-  const time = parts[0];
-  if (!time) return null;
-  const days = (parts.length > 1 && parts[1] !== "") ? parts[1].split(',').map(Number) : [];
-  return { time, days };
-}
-
-// 🟢 編碼畫面上的資料為字串
-function encodeRem(timeId, daysName) {
-  const t = document.getElementById(timeId).value;
-  if (!t) return '';
-  const cbs = Array.from(document.querySelectorAll(`input[name="${daysName}"]:checked`));
-  if (cbs.length === 0) return ''; 
-  const days = cbs.map(cb => cb.value).join(',');
-  return `${t}|${days}`;
-}
-
-// 🟢 將字串解碼並打勾畫面
-function decodeRem(val, timeId, daysName) {
-  document.querySelectorAll(`input[name="${daysName}"]`).forEach(cb => cb.checked = false);
-  document.getElementById(timeId).value = '';
-
-  if (!val) return;
-  const parsed = parseRem(val);
-  if (!parsed) return;
-  
-  document.getElementById(timeId).value = parsed.time;
-  document.querySelectorAll(`input[name="${daysName}"]`).forEach(cb => {
-    cb.checked = parsed.days.includes(Number(cb.value));
-  });
-}
-
-async function loadReminders(){
-  try{
-    const res = await fetch(`${API_BASE}/reminders/${currentUserId}`);
-    const json = await res.json();
-    if(json.data) {
-      decodeRem(json.data.tPreMeal, 'tPreMeal', 'daysPreMeal');
-      decodeRem(json.data.tPostMeal, 'tPostMeal', 'daysPostMeal');
-      decodeRem(json.data.tBedtime, 'tBedtime', 'daysBedtime');
-      document.getElementById('nextAppt').value = json.data.nextAppt || '';
-    }
-  }catch(e){}
-}
-
-async function saveReminders(){
-  const payload = {
-    userId: currentUserId,
-    tPreMeal:  encodeRem('tPreMeal', 'daysPreMeal'),
-    tPostMeal: encodeRem('tPostMeal', 'daysPostMeal'),
-    tBedtime:  encodeRem('tBedtime', 'daysBedtime'),
-    nextAppt:  document.getElementById('nextAppt').value || ''
-  };
-
-  if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
-    Notification.requestPermission();
-  }
-
-  try {
-    await fetch(`${API_BASE}/reminders`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-    });
-    
-    if (typeof syncRemindersCache === 'function') syncRemindersCache();
-
-    const box = document.getElementById('reminderResult');
-    if(box){ box.textContent = '已儲存提醒設定。'; box.className = 'result ok'; }
-    toast('已儲存提醒設定','ok');
-  } catch(e) { toast('儲存失敗', 'err'); }
-}
-
-function pad2(n){ return String(n).padStart(2,'0'); }
-
-function icsDateTimeLocal(d){
-  return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
-}
-
-function nextOccurrenceForTimeAndDays(hhmm, days) {
-  const [hh, mm] = (hhmm || '00:00').split(':').map(x => parseInt(x, 10));
-  const now = new Date();
-  let d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh || 0, mm || 0, 0);
-  
-  if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 1);
-  
-  if (days && days.length > 0 && days.length < 7) {
-    let attempts = 0;
-    while (!days.includes(d.getDay()) && attempts < 7) {
-      d.setDate(d.getDate() + 1);
-      attempts++;
-    }
-  }
-  return d;
-}
-
-function buildICS(rem){
-  const lines = [];
-  const now = new Date();
-  const dtstamp = icsDateTimeLocal(now);
-  const uidBase = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
-
-  lines.push('BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//go Health//Reminders//ZH-TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
-
-  const dailyItems = [
-    { title:'餐前', val: rem.tPreMeal },
-    { title:'餐後', val: rem.tPostMeal },
-    { title:'睡前', val: rem.tBedtime },
-  ];
-
-  dailyItems.forEach((it, idx)=>{
-    const parsed = parseRem(it.val);
-    if(!parsed || !parsed.time || parsed.days.length === 0) return;
-    
-    const start = nextOccurrenceForTimeAndDays(parsed.time, parsed.days);
-    const end = new Date(start.getTime() + 10 * 60000); 
-
-    let rrule = 'RRULE:FREQ=DAILY';
-    if (parsed.days.length > 0 && parsed.days.length < 7) {
-      const dayMap = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-      rrule = `RRULE:FREQ=WEEKLY;BYDAY=${parsed.days.map(d => dayMap[d]).join(',')}`;
-    }
-
-    lines.push('BEGIN:VEVENT');
-    lines.push(`UID:${uidBase}-glu-${idx}@gohealth`);
-    lines.push(`DTSTAMP:${dtstamp}`);
-    lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
-    lines.push(`DTEND:${icsDateTimeLocal(end)}`);
-    lines.push(rrule); 
-    lines.push(`SUMMARY:血糖提醒：${it.title}量測`);
-    lines.push('DESCRIPTION:由「穩糖圈 go Health」匯出的提醒');
-
-    lines.push('BEGIN:VALARM');
-    lines.push('TRIGGER:-PT0M'); 
-    lines.push('ACTION:DISPLAY');
-    lines.push(`DESCRIPTION:${it.title}！請記得量測血糖喔！`);
-    lines.push('END:VALARM');
-    lines.push('END:VEVENT');
-  });
-
-  if(rem.nextAppt){
-    const [Y,M,D] = rem.nextAppt.split('-').map(x=>parseInt(x,10));
-    const appt = new Date(Y, (M||1)-1, D||1, 9, 0, 0);
-    lines.push('BEGIN:VEVENT', `UID:${uidBase}-appt@gohealth`, `DTSTAMP:${dtstamp}`, `DTSTART:${icsDateTimeLocal(appt)}`, `DTEND:${icsDateTimeLocal(new Date(appt.getTime()+30*60*1000))}`);
-    lines.push('SUMMARY:回診提醒（糖尿病追蹤）', 'DESCRIPTION:由「穩糖圈 go Health」匯出的回診事件', 'END:VEVENT');
-  }
-
-  lines.push('END:VCALENDAR');
-  return lines.join('\r\n');
-}
-
-function downloadICS(){
-  const rem = {
-    tPreMeal: encodeRem('tPreMeal', 'daysPreMeal'),
-    tPostMeal: encodeRem('tPostMeal', 'daysPostMeal'),
-    tBedtime: encodeRem('tBedtime', 'daysBedtime'),
-    nextAppt: document.getElementById('nextAppt').value || '',
-  };
-
-  const hasAny = rem.tPreMeal || rem.tPostMeal || rem.tBedtime || rem.nextAppt;
-  if(!hasAny){
-    toast('請至少填寫一個提醒時間且勾選星期，或回診日期再匯出','err');
-    return;
-  }
-
-  const ics = buildICS(rem);
-  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'gohealth-reminders.ics';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  toast('已匯出行事曆檔案 (.ics)','ok');
-}
-
-/* ================================================= */
-/* 往下尋找背景檢查函數也更新 */
-/* ================================================= */
-let globalRemindersCache = null;
-
-async function syncRemindersCache() {
-  try {
-    const res = await fetch(`${API_BASE}/reminders/${currentUserId}`);
-    const json = await res.json();
-    globalRemindersCache = json.data || null;
-  } catch(e) {}
-}
-syncRemindersCache();
-
-window.__gluReminderCheck = function() {
-  if (!globalRemindersCache) return;
-  const now = new Date();
-  const hhmmNow = `${fmt2(now.getHours())}:${fmt2(now.getMinutes())}`;
-  const todayDay = now.getDay(); 
-
-  const checks = [
-    { title: '餐前', val: globalRemindersCache.tPreMeal },
-    { title: '餐後', val: globalRemindersCache.tPostMeal },
-    { title: '睡前', val: globalRemindersCache.tBedtime }
-  ];
-
-  checks.forEach(c => {
-    const parsed = parseRem(c.val);
-    if (parsed && parsed.days.includes(todayDay) && parsed.time === hhmmNow) {
+      const lines = [];
+      lines.push('BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//go Health//Consultation//ZH-TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
+      lines.push('BEGIN:VEVENT');
+      lines.push(`UID:${uidBase}-consult@gohealth`);
+      lines.push(`DTSTAMP:${dtstamp}`);
+      lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
+      lines.push(`DTEND:${icsDateTimeLocal(end)}`);
+      lines.push(`SUMMARY:穩糖圈 - 專業諮詢預約`);
+      lines.push('DESCRIPTION:您在「穩糖圈 go Health」預約的專業諮詢時段。');
+      lines.push('BEGIN:VALARM');
+      lines.push('TRIGGER:-PT30M'); 
+      lines.push('ACTION:DISPLAY');
+      lines.push('DESCRIPTION:穩糖圈專業諮詢即將開始！');
+      lines.push('END:VALARM');
+      lines.push('END:VEVENT');
+      lines.push('END:VCALENDAR');
       
-      const titleMsg = '🩸 血糖量測提醒';
-      const body = `時間到了！請進行「${c.title}」血糖量測，並回填至穩糖圈喔！`;
-
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(titleMsg, { body });
-      }
-      const box = document.getElementById('reminderResult');
-      if (box) { box.textContent = body; box.className = 'result ok'; }
+      return lines.join('\r\n');
     }
-  });
-};
 
-/* 綁定提醒按鈕 */
-document.getElementById('saveRemindersBtn')?.addEventListener('click', saveReminders);
-document.getElementById('downloadICSBtn')?.addEventListener('click', downloadICS);
-loadReminders();
+    async function saveReserve(){
+      const yes = document.getElementById('reserveYes')?.checked;
+      const date = document.getElementById('consultDate')?.value || '';
+      const slot = document.getElementById('consultSlot')?.value || '';
+      const consultTime = document.getElementById('consultTime')?.value || '';
 
+      if(yes && (!date || !slot)){ toast('請先選擇日期與時段再儲存預約', 'err'); return; }
+      const payload = { userId: currentUserId, need: !!yes, date, slot, consultTime };
+      try {
+        await fetch(`${API_BASE}/reservation`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        const resBox = document.getElementById('reserveResult');
+        if (resBox) { resBox.textContent = yes ? '已儲存預約諮詢。' : '已儲存：不需要預約。'; resBox.className = 'result ok'; }
+        toast('預約設定已儲存', 'ok');
 
-/* ============ 專業諮詢：只有「需要」才顯示預約欄位，並同步到 #consultTime ============ */
-function slotToTime(slot){
-  // 你可以依需求調整時段對應時間
-  const map = { morning:'09:00', noon:'14:00', evening:'19:00' };
-  return map[slot] || '';
-}
-
-function syncConsultTime(){
-  const yes = document.getElementById('reserveYes')?.checked;
-  const hidden = document.getElementById('consultTime');
-  if(!hidden) return;
-
-  if(!yes){
-    hidden.value = '';
-    return;
-  }
-
-  const d = document.getElementById('consultDate')?.value || '';
-  const s = document.getElementById('consultSlot')?.value || '';
-  const t = slotToTime(s);
-
-  if(d && t){
-    // 產生 ISO（例如 2025-12-24T09:00:00.000Z 會有時區問題）
-    // 這裡用「本地浮動時間」拼字串，再 new Date 轉 ISO（仍可被正確顯示）
-    const localStr = `${d}T${t}:00`;
-    const iso = new Date(localStr).toISOString();
-    hidden.value = iso;
-  }else{
-    hidden.value = '';
-  }
-}
-
-function setReserveUI(show){
-  const L = document.getElementById('reserveFieldsL');
-  const R = document.getElementById('reserveFieldsR');
-  const Lab = document.getElementById('reserveLabel');
-
-  if(L) L.style.display = show ? '' : 'none';
-  if(R) R.style.display = show ? '' : 'none';
-  if(Lab) Lab.style.display = show ? '' : 'none';
-
-  if(!show){
-    document.getElementById('consultDate') && (document.getElementById('consultDate').value = '');
-    document.getElementById('consultSlot') && (document.getElementById('consultSlot').value = '');
-    syncConsultTime();
-  }
-}
-
-function initConsultPanel(){
-  const yes = document.getElementById('reserveYes');
-  const no  = document.getElementById('reserveNo');
-  const date = document.getElementById('consultDate');
-  const slot = document.getElementById('consultSlot');
-
-  if(yes) yes.addEventListener('change', ()=>{ if(yes.checked){ setReserveUI(true); syncConsultTime(); } });
-  if(no)  no.addEventListener('change',  ()=>{ if(no.checked){ setReserveUI(false); } });
-
-  if(date) date.addEventListener('change', syncConsultTime);
-  if(slot) slot.addEventListener('change', syncConsultTime);
-
-  // 初始狀態
-  setReserveUI(!!yes?.checked);
-  syncConsultTime();
-}
-
-initConsultPanel();
-
-/* ============ 預約諮詢與留言板 (API 整合版) ============ */
-// 🟢 新增：產生預約諮詢專用 ICS 的函數
-function buildConsultICS(consultTimeISO) {
-  if (!consultTimeISO) return '';
-  
-  const start = new Date(consultTimeISO);
-  // 假設預約諮詢時段為 30 分鐘
-  const end = new Date(start.getTime() + 30 * 60000);
-  
-  const dtstamp = icsDateTimeLocal(new Date());
-  const uidBase = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
-  
-  const lines = [];
-  lines.push('BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//go Health//Consultation//ZH-TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
-  lines.push('BEGIN:VEVENT');
-  lines.push(`UID:${uidBase}-consult@gohealth`);
-  lines.push(`DTSTAMP:${dtstamp}`);
-  lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
-  lines.push(`DTEND:${icsDateTimeLocal(end)}`);
-  lines.push(`SUMMARY:穩糖圈 - 專業諮詢預約`);
-  lines.push('DESCRIPTION:您在「穩糖圈 go Health」預約的專業諮詢時段。');
-  
-  // 加上鬧鐘：提早 30 分鐘提醒
-  lines.push('BEGIN:VALARM');
-  lines.push('TRIGGER:-PT30M'); 
-  lines.push('ACTION:DISPLAY');
-  lines.push('DESCRIPTION:穩糖圈專業諮詢即將開始！');
-  lines.push('END:VALARM');
-
-  lines.push('END:VEVENT');
-  lines.push('END:VCALENDAR');
-  
-  return lines.join('\r\n');
-}
-
-// 🟢 修改：修復隱形 Bug 並加入下載 ICS 邏輯
-async function saveReserve(){
-  const yes = document.getElementById('reserveYes')?.checked;
-  const date = document.getElementById('consultDate')?.value || '';
-  const slot = document.getElementById('consultSlot')?.value || '';
-  const consultTime = document.getElementById('consultTime')?.value || '';
-
-  if(yes && (!date || !slot)){
-    toast('請先選擇日期與時段再儲存預約', 'err'); 
-    return;
-  }
-  
-  const payload = { userId: currentUserId, need: !!yes, date, slot, consultTime };
-  
-  try {
-    await fetch(`${API_BASE}/reservation`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-    });
-    
-    // 修復畫面顯示文字的邏輯
-    const resBox = document.getElementById('reserveResult');
-    if (resBox) {
-      resBox.textContent = yes ? '已儲存預約諮詢。' : '已儲存：不需要預約。';
-      resBox.className = 'result ok';
+        if (yes && consultTime) {
+          const ics = buildConsultICS(consultTime);
+          if (ics) {
+            const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'gohealth-consultation.ics';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(()=>URL.revokeObjectURL(url), 1000);
+            toast('已匯出預約行事曆 (.ics)', 'ok');
+          }
+        }
+      } catch(e) { toast('儲存失敗', 'err'); }
     }
-    toast('預約設定已儲存', 'ok');
 
-    // 🟢 如果使用者有勾選「需要預約」並且有時間，就觸發 ICS 下載
-    if (yes && consultTime) {
-      const ics = buildConsultICS(consultTime);
-      if (ics) {
-        const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'gohealth-consultation.ics';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(()=>URL.revokeObjectURL(url), 1000);
-        
-        toast('已匯出預約行事曆 (.ics)', 'ok');
-      }
+    async function loadReserve(){
+      try{ 
+        const res = await fetch(`${API_BASE}/reservation/${currentUserId}`);
+        const json = await res.json();
+        const r = json.data;
+        if(!r) return;
+        if(r.need){
+          if(document.getElementById('reserveYes')) document.getElementById('reserveYes').checked = true;
+          setReserveUI(true);
+        } else {
+          if(document.getElementById('reserveNo')) document.getElementById('reserveNo').checked = true;
+          setReserveUI(false);
+        }
+        if(document.getElementById('consultDate')) document.getElementById('consultDate').value = r.date || '';
+        if(document.getElementById('consultSlot')) document.getElementById('consultSlot').value = r.slot || '';
+        syncConsultTime();
+      }catch(e){ }
     }
-    
-  } catch(e) { 
-    toast('儲存失敗', 'err'); 
-  }
-}
+    document.getElementById('btnSaveReserve')?.addEventListener('click', saveReserve);
+    loadReserve();
 
-async function loadReserve(){
-  try{ 
-    const res = await fetch(`${API_BASE}/reservation/${currentUserId}`);
-    const json = await res.json();
-    const r = json.data;
-    if(!r) return;
-    if(r.need){
-      if(document.getElementById('reserveYes')) document.getElementById('reserveYes').checked = true;
-      setReserveUI(true);
-    } else {
-      if(document.getElementById('reserveNo')) document.getElementById('reserveNo').checked = true;
-      setReserveUI(false);
-    }
-    if(document.getElementById('consultDate')) document.getElementById('consultDate').value = r.date || '';
-    if(document.getElementById('consultSlot')) document.getElementById('consultSlot').value = r.slot || '';
-    syncConsultTime();
-  }catch(e){ }
-}
-document.getElementById('btnSaveReserve')?.addEventListener('click', saveReserve);
-loadReserve();
-
-    /* --- 留言板區塊 --- */
     function roleLabel(v){
       const map = { doctor:'醫師', nurse:'護理師', dietitian:'營養師', pharmacist:'藥師', research:'研究團隊' };
       return map[v] || v || '';
@@ -1803,7 +1537,6 @@ loadReserve();
             </div>
           ` : '';
 
-          // 🟢 判斷標題：只要是控制組，或「沒有預約時間(單純留言)」，就顯示「聯絡系統」
           const displayTitle = (window.currentRctGroup === 'control' || !item.consultTime) ? '聯絡系統' : roleLabel(item.role);
 
           return `
@@ -1823,8 +1556,6 @@ loadReserve();
     async function sendConsult(){
       const isControl = (window.currentRctGroup === 'control');
       const isReserve = isControl ? false : (document.getElementById('reserveYes')?.checked || false);
-      
-      // 🟢 關鍵邏輯：如果是純留言(沒有預約)，一律將對象改為 'research' 送給後端 Admin
       const role = isReserve ? (document.getElementById('role')?.value || 'patient') : 'research';
       const consultTime = isReserve ? (document.getElementById('consultTime')?.value || '') : ''; 
       const message = document.getElementById('consultMsg')?.value.trim() || '';
@@ -1838,672 +1569,393 @@ loadReserve();
         });
         
         document.getElementById('consultMsg').value = ''; 
-        const cnt = Number(localStorage.getItem('countMsg') || '0') + 1;
-        localStorage.setItem('countMsg', cnt);
+        localStorage.setItem('countMsg', Number(localStorage.getItem('countMsg') || '0') + 1);
         if (typeof updateCounters === 'function') updateCounters();
         if (typeof syncStatsToDB === 'function') syncStatsToDB();
 
         renderConsultList(); 
         
-        // 🟢 修改：只有在「有勾選預約」的情況下，才發送 Email
         if (isReserve) {
           toast('預約與留言已送出，正在發送通知信給專業人員...', 'ok');
           sendEmailToProfessional(role, message, isReserve, consultTime);
         } else {
-          // 純留言（Control組 或 Experimental組不預約），不寄信，只顯示送出成功
           toast('留言已送出給系統', 'ok');
         }
-        
       } catch(e) { toast('送出失敗', 'err'); }
     }
 
-// 背景寄信專屬函數 (呼叫後端 API)
-async function sendEmailToProfessional(role, message, isReserve, consultTime) {
-  const emailMap = {
-    doctor: 'Doctorchuang8777@gmail.com',     
-    nurse: 'bettywang1114@gmail.com',         
-    dietitian: 'a8307142001@gmail.com',       
-    pharmacist: 'g363110012@tmu.edu.tw',      
-    research: 'b02552@mail.fjuh.fju.edu.tw'   
-  };
+    async function sendEmailToProfessional(role, message, isReserve, consultTime) {
+      const emailMap = {
+        doctor: 'Doctorchuang8777@gmail.com',     
+        nurse: 'bettywang1114@gmail.com',         
+        dietitian: 'a8307142001@gmail.com',       
+        pharmacist: 'g363110012@tmu.edu.tw',      
+        research: 'b02552@mail.fjuh.fju.edu.tw'   
+      };
+      const targetEmail = emailMap[role];
+      if (!targetEmail) return;
 
-  const targetEmail = emailMap[role];
-  if (!targetEmail) return;
+      const subject = `[穩糖圈] 專業諮詢留言 - 來自病患 ${currentUserId}`;
+      let body = `專業人員您好，\n\n收到來自「穩糖圈 go Health」使用者的諮詢留言：\n\n`;
+      body += `【使用者帳號 (Email/手機)】：${currentUserId}\n【留言內容】：\n${message}\n\n`;
+      if (isReserve && consultTime) {
+        body += `【預約時段】：需要預約 (${new Date(consultTime).toLocaleString('zh-TW', { hour12: false })})\n`;
+      } else { body += `【預約時段】：不需要預約\n`; }
+      body += `\n--------------------------------\n(此為系統自動發送之通知信，如需聯絡病患，請直接以病患之帳號聯絡)`;
 
-  const subject = `[穩糖圈] 專業諮詢留言 - 來自病患 ${currentUserId}`;
-  let body = `專業人員您好，\n\n收到來自「穩糖圈 go Health」使用者的諮詢留言：\n\n`;
-  body += `【使用者帳號 (Email/手機)】：${currentUserId}\n`;
-  body += `【留言內容】：\n${message}\n\n`;
-
-  if (isReserve && consultTime) {
-    const timeStr = new Date(consultTime).toLocaleString('zh-TW', { hour12: false });
-    body += `【預約時段】：需要預約 (${timeStr})\n`;
-  } else {
-    body += `【預約時段】：不需要預約\n`;
-  }
-  body += `\n--------------------------------\n(此為系統自動發送之通知信，如需聯絡病患，請直接以病患之帳號聯絡)`;
-
-  try {
-    const response = await fetch(`${API_BASE}/send-email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: targetEmail, subject: subject, text: body })
-    });
-
-    if(response.ok) {
-      toast('系統已成功發送通知信給該專業人員', 'ok');
-    } else {
-      toast('信件發送失敗，請稍後再試', 'err');
+      try {
+        const response = await fetch(`${API_BASE}/send-email`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: targetEmail, subject: subject, text: body })
+        });
+        if(response.ok) { toast('系統已成功發送通知信給該專業人員', 'ok'); } 
+        else { toast('信件發送失敗，請稍後再試', 'err'); }
+      } catch (e) { toast('寄信發生網路錯誤', 'err'); }
     }
-  } catch (e) {
-    toast('寄信發生網路錯誤', 'err');
-  }
-}
 
-async function clearConsult(){
-  if(!confirm('確定要清空所有留言紀錄？')) return;
-  try {
-    await fetch(`${API_BASE}/consults/${currentUserId}`, { method: 'DELETE' });
-    renderConsultList(); toast('已清空留言紀錄', 'ok');
-  } catch(e) { toast('清空失敗', 'err'); }
-}
+    async function clearConsult(){
+      if(!confirm('確定要清空所有留言紀錄？')) return;
+      try {
+        await fetch(`${API_BASE}/consults/${currentUserId}`, { method: 'DELETE' });
+        renderConsultList(); toast('已清空留言紀錄', 'ok');
+      } catch(e) { toast('清空失敗', 'err'); }
+    }
 
-document.getElementById('btnSendConsult')?.addEventListener('click', sendConsult);
-document.getElementById('btnClearConsult')?.addEventListener('click', clearConsult);
-renderConsultList(); 
+    document.getElementById('btnSendConsult')?.addEventListener('click', sendConsult);
+    document.getElementById('btnClearConsult')?.addEventListener('click', clearConsult);
+    renderConsultList(); 
 
-/* ================ (新版) 用藥提醒 ================ */
-const MEDS_V2_KEY = 'medicationReminderV2';
+    /* ================ (六) 用藥提醒 ================ */
+    const MED_FREQ_OPTIONS = [
+      { value: 'preB',  label: '早餐前', defaultTime: '07:30' },
+      { value: 'postB', label: '早餐後', defaultTime: '08:30' },
+      { value: 'preL',  label: '午餐前', defaultTime: '11:30' },
+      { value: 'postL', label: '午餐後', defaultTime: '12:30' },
+      { value: 'preD',  label: '晚餐前', defaultTime: '17:30' },
+      { value: 'postD', label: '晚餐後', defaultTime: '18:30' },
+      { value: 'bed',   label: '睡前',   defaultTime: '21:30' }
+    ];
 
-const MED_FREQ_OPTIONS = [
-  { value: 'preB',  label: '早餐前', defaultTime: '07:30' },
-  { value: 'postB', label: '早餐後', defaultTime: '08:30' },
-  { value: 'preL',  label: '午餐前', defaultTime: '11:30' },
-  { value: 'postL', label: '午餐後', defaultTime: '12:30' },
-  { value: 'preD',  label: '晚餐前', defaultTime: '17:30' },
-  { value: 'postD', label: '晚餐後', defaultTime: '18:30' },
-  { value: 'bed',   label: '睡前',   defaultTime: '21:30' }
-];
+    const MED_FREQ_LABEL = MED_FREQ_OPTIONS.reduce((acc, x) => { acc[x.value] = x.label; return acc; }, {});
+    function defaultTimeForFreq(freq) { return (MED_FREQ_OPTIONS.find(f => f.value === freq)?.defaultTime) || '08:00'; }
 
-const MED_FREQ_LABEL = MED_FREQ_OPTIONS.reduce((acc, x) => { acc[x.value] = x.label; return acc; }, {});
+    function timeMinusMinutes(hhmm, mins) {
+      if (!hhmm || !/^\d{2}:\d{2}$/.test(hhmm)) return hhmm || '';
+      const [hStr, mStr] = hhmm.split(':');
+      let total = parseInt(hStr, 10) * 60 + parseInt(mStr, 10) - (mins || 0);
+      const DAY = 24 * 60;
+      total = ((total % DAY) + DAY) % DAY; 
+      const h = Math.floor(total / 60);
+      const m = total % 60;
+      return `${fmt2(h)}:${fmt2(m)}`;
+    }
 
-function defaultTimeForFreq(freq) {
-  const found = MED_FREQ_OPTIONS.find(f => f.value === freq);
-  return (found && found.defaultTime) || '08:00';
-}
-
-function timeMinusMinutes(hhmm, mins) {
-  if (!hhmm || !/^\d{2}:\d{2}$/.test(hhmm)) return hhmm || '';
-  const [hStr, mStr] = hhmm.split(':');
-  let total = parseInt(hStr, 10) * 60 + parseInt(mStr, 10) - (mins || 0);
-  const DAY = 24 * 60;
-  total = ((total % DAY) + DAY) % DAY; 
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  return `${fmt2(h)}:${fmt2(m)}`;
-}
-
-function createMedRow(type, data = {}) {
-  const row = document.createElement('div');
-  row.className = 'list-item med-row';
-  row.dataset.type = type;
-  row.dataset.id = data.id || crypto.randomUUID();
-
-  const name = data.name || '';
-  const dose = data.dose || '';
-  const freq = data.freq || 'preB';
-  const time = data.time || defaultTimeForFreq(freq);
-  const enableRemind = data.enableRemind !== false;  
-  const leadMinutes = (typeof data.leadMinutes === 'number') ? data.leadMinutes : 30;
-  
-  // 🟢 讀取週期與星期資料
-  const cycle = data.cycle || 'daily';
-  const days = Array.isArray(data.days) ? data.days : [];
-
-  row.innerHTML = `
-    <div style="flex:1;min-width:0;">
-      <div class="row" style="margin-bottom:.4em;gap:.6em;">
-        <div class="col">
-          <label style="display:block;margin-bottom:.2em;">藥品名稱</label>
-          <input type="text" class="med-name" placeholder="${type === 'oral' ? '例如：Metformin' : '例如：Glargine'}" value="${name}">
-        </div>
-        <div class="col">
-          <label style="display:block;margin-bottom:.2em;">劑量 / 用法</label>
-          <input type="text" class="med-dose" placeholder="${type === 'oral' ? '例如：500 mg 1# bid' : '例如：10 單位'}" value="${dose}">
-        </div>
-      </div>
+    function createMedRow(type, data = {}) {
+      const row = document.createElement('div');
+      row.className = 'list-item med-row';
+      row.dataset.type = type;
       
-      <!-- 🟢 加入用藥週期選項 -->
-      <div class="row" style="margin-bottom:.4em;gap:.6em;align-items:center;">
-        <div class="col">
-          <label style="display:block;margin-bottom:.2em;">用藥頻率</label>
-          <select class="med-freq">
-            ${MED_FREQ_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === freq ? 'selected' : ''}>${opt.label}</option>`).join('')}
-          </select>
+      // 🟢 套用防彈版 ID
+      row.dataset.id = data.id || generateUUID();
+
+      const name = data.name || '';
+      const dose = data.dose || '';
+      const freq = data.freq || 'preB';
+      const time = data.time || defaultTimeForFreq(freq);
+      const enableRemind = data.enableRemind !== false;  
+      const leadMinutes = (typeof data.leadMinutes === 'number') ? data.leadMinutes : 30;
+      const cycle = data.cycle || 'daily';
+      const days = Array.isArray(data.days) ? data.days : [];
+
+      row.innerHTML = `
+        <div style="flex:1;min-width:0;">
+          <div class="row" style="margin-bottom:.4em;gap:.6em;">
+            <div class="col"><label style="display:block;margin-bottom:.2em;">藥品名稱</label><input type="text" class="med-name" placeholder="${type === 'oral' ? '例如：Metformin' : '例如：Glargine'}" value="${name}"></div>
+            <div class="col"><label style="display:block;margin-bottom:.2em;">劑量 / 用法</label><input type="text" class="med-dose" placeholder="${type === 'oral' ? '例如：500 mg 1# bid' : '例如：10 單位'}" value="${dose}"></div>
+          </div>
+          <div class="row" style="margin-bottom:.4em;gap:.6em;align-items:center;">
+            <div class="col"><label style="display:block;margin-bottom:.2em;">用藥頻率</label><select class="med-freq">${MED_FREQ_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === freq ? 'selected' : ''}>${opt.label}</option>`).join('')}</select></div>
+            <div class="col"><label style="display:block;margin-bottom:.2em;">服藥時間</label><input type="time" class="med-time" value="${time}"></div>
+            <div class="col"><label style="display:block;margin-bottom:.2em;">用藥週期</label><select class="med-cycle"><option value="daily" ${cycle === 'daily' ? 'selected' : ''}>每天</option><option value="weekly" ${cycle === 'weekly' ? 'selected' : ''}>每週特定天</option></select></div>
+          </div>
+          <div class="row med-days-row" style="margin-bottom:.4em; display:${cycle === 'weekly' ? 'flex' : 'none'};">
+            <div class="col" style="font-size:0.95em;">
+              <span class="muted" style="margin-right:8px;">請勾選用藥日：</span>
+              ${[1, 2, 3, 4, 5, 6, 0].map(d => {
+                const labels = ['日','一','二','三','四','五','六'];
+                return `<label style="margin-right:8px; cursor:pointer;"><input type="checkbox" class="med-day-cb" value="${d}" ${days.includes(d) ? 'checked' : ''}> 週${labels[d]}</label>`;
+              }).join('')}
+            </div>
+          </div>
+          <div class="row" style="align-items:center;gap:.6em;">
+            <label style="display:flex;align-items:center;gap:.3em;"><input type="checkbox" class="med-enable" ${enableRemind ? 'checked' : ''}> 需要提醒</label>
+            <div>提前 <input type="number" class="med-lead" min="0" max="240" step="5" style="width:70px;" value="${leadMinutes}"> 分鐘提醒</div>
+          </div>
         </div>
-        <div class="col">
-          <label style="display:block;margin-bottom:.2em;">服藥時間</label>
-          <input type="time" class="med-time" value="${time}">
-        </div>
-        <div class="col">
-          <label style="display:block;margin-bottom:.2em;">用藥週期</label>
-          <select class="med-cycle">
-            <option value="daily" ${cycle === 'daily' ? 'selected' : ''}>每天</option>
-            <option value="weekly" ${cycle === 'weekly' ? 'selected' : ''}>每週特定天</option>
-          </select>
-        </div>
-      </div>
+        <div><button type="button" class="btnDelMed" style="background:#9e9e9e;">刪除</button></div>
+      `;
 
-      <!-- 🟢 隱藏的星期選擇區塊 (選擇 weekly 才會出現) -->
-      <div class="row med-days-row" style="margin-bottom:.4em; display:${cycle === 'weekly' ? 'flex' : 'none'};">
-        <div class="col" style="font-size:0.95em;">
-          <span class="muted" style="margin-right:8px;">請勾選用藥日：</span>
-          ${[1, 2, 3, 4, 5, 6, 0].map(d => {
-            const labels = ['日','一','二','三','四','五','六'];
-            const isChecked = days.includes(d) ? 'checked' : '';
-            return `<label style="margin-right:8px; cursor:pointer;"><input type="checkbox" class="med-day-cb" value="${d}" ${isChecked}> 週${labels[d]}</label>`;
-          }).join('')}
-        </div>
-      </div>
+      row.querySelector('.med-freq').addEventListener('change', (e) => { if (!row.querySelector('.med-time').value) row.querySelector('.med-time').value = defaultTimeForFreq(e.target.value); });
+      row.querySelector('.med-cycle').addEventListener('change', (e) => { row.querySelector('.med-days-row').style.display = (e.target.value === 'weekly') ? 'flex' : 'none'; });
+      row.querySelector('.btnDelMed').addEventListener('click', () => { const parent = row.parentElement; row.remove(); if (!parent.querySelector('.med-row')) parent.appendChild(createMedRow(type)); });
+      return row;
+    }
 
-      <div class="row" style="align-items:center;gap:.6em;">
-        <label style="display:flex;align-items:center;gap:.3em;">
-          <input type="checkbox" class="med-enable" ${enableRemind ? 'checked' : ''}>
-          需要提醒
-        </label>
-        <div>
-          提前 <input type="number" class="med-lead" min="0" max="240" step="5" style="width:70px;" value="${leadMinutes}"> 分鐘提醒
-        </div>
-      </div>
-    </div>
-    <div>
-      <button type="button" class="btnDelMed" style="background:#9e9e9e;">刪除</button>
-    </div>
-  `;
+    function collectMedRows() {
+      return Array.from(document.querySelectorAll('.med-row')).map(row => {
+        return { 
+          id: row.dataset.id || generateUUID(), // 🟢 套用防彈版 ID
+          type: row.dataset.type || 'oral',
+          name: row.querySelector('.med-name')?.value.trim() || '', dose: row.querySelector('.med-dose')?.value.trim() || '',
+          freq: row.querySelector('.med-freq')?.value || 'preB', time: row.querySelector('.med-time')?.value || defaultTimeForFreq('preB'),
+          enableRemind: !!row.querySelector('.med-enable')?.checked, leadMinutes: Number(row.querySelector('.med-lead')?.value || 30),
+          cycle: row.querySelector('.med-cycle')?.value || 'daily', days: Array.from(row.querySelectorAll('.med-day-cb:checked')).map(cb => Number(cb.value))
+        };
+      }).filter(m => m.name);
+    }
 
-  // 綁定連動事件
-  const freqSelect = row.querySelector('.med-freq');
-  const timeInput = row.querySelector('.med-time');
-  const cycleSelect = row.querySelector('.med-cycle');
-  const daysRow = row.querySelector('.med-days-row');
+    function renderMedsFromData(data) {
+      const oralList = document.getElementById('oralList'); const insList  = document.getElementById('insList');
+      if (!oralList || !insList) return;
+      oralList.innerHTML = ''; insList.innerHTML = '';
+      const meds = Array.isArray(data) ? data : [];
+      const oralMeds = meds.filter(m => m.type === 'oral'); const insMeds  = meds.filter(m => m.type === 'ins');
+      if (oralMeds.length === 0) oralList.appendChild(createMedRow('oral')); else oralMeds.forEach(m => oralList.appendChild(createMedRow('oral', m)));
+      if (insMeds.length === 0) insList.appendChild(createMedRow('ins')); else insMeds.forEach(m => insList.appendChild(createMedRow('ins', m)));
+    }
 
-  freqSelect.addEventListener('change', () => {
-    if (!timeInput.value) timeInput.value = defaultTimeForFreq(freqSelect.value);
-  });
+    async function saveMeds() {
+      const meds = collectMedRows(); 
+      if (meds.length === 0) { toast('請至少填寫一筆藥品名稱', 'err'); return; }
+      try {
+        await fetch(`${API_BASE}/meds/sync`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUserId, meds }) });
+        const resBox = document.getElementById('medsResult');
+        if (resBox) { resBox.textContent = '已儲存用藥提醒。'; resBox.className = 'result ok'; }
+        toast('已儲存', 'ok'); syncMedsCacheForReminders();
+      } catch(e) { toast('儲存失敗', 'err'); }
+    }
 
-  cycleSelect.addEventListener('change', () => {
-    daysRow.style.display = (cycleSelect.value === 'weekly') ? 'flex' : 'none';
-  });
+    async function loadMeds() {
+      try {
+        const res = await fetch(`${API_BASE}/meds/${currentUserId}`);
+        const json = await res.json();
+        renderMedsFromData(json.data || []);
+      } catch (e) { renderMedsFromData([]); }
+    }
 
-  row.querySelector('.btnDelMed').addEventListener('click', () => {
-    const parent = row.parentElement;
-    row.remove();
-    if (!parent.querySelector('.med-row')) parent.appendChild(createMedRow(type));
-  });
+    async function clearMeds() {
+      if (!confirm('確定要清除所有用藥設定？')) return;
+      try {
+        await fetch(`${API_BASE}/meds/${currentUserId}`, { method: 'DELETE' });
+        renderMedsFromData([]);
+        const resBox = document.getElementById('medsResult');
+        if (resBox) { resBox.textContent = '已清除所有設定。'; resBox.className = 'result'; }
+      } catch(e) { toast('清除失敗', 'err'); }
+    }
 
-  return row;
-}
+    function buildMedsICS(meds){
+      const lines = [];
+      const dtstamp = icsDateTimeLocal(new Date());
+      const uidBase = generateUUID(); // 🟢 套用防彈版 ID
+      lines.push('BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//go Health//Medication Reminders//ZH-TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
 
-function collectMedRows() {
-  const rows = Array.from(document.querySelectorAll('.med-row'));
-  return rows.map(row => {
-    // 🟢 收集週期與星期幾的資料
-    const cycle = row.querySelector('.med-cycle')?.value || 'daily';
-    const days = Array.from(row.querySelectorAll('.med-day-cb:checked')).map(cb => Number(cb.value));
+      meds.forEach((m, idx) => {
+        if(!m.name || !m.time) return;
+        const start = nextOccurrenceForTimeAndDays(m.time, m.days);
+        let rrule = 'RRULE:FREQ=DAILY';
+        if (m.cycle === 'weekly' && Array.isArray(m.days) && m.days.length > 0) {
+          const dayMap = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+          rrule = `RRULE:FREQ=WEEKLY;BYDAY=${m.days.map(d => dayMap[d]).join(',')}`;
+        }
+        lines.push('BEGIN:VEVENT');
+        lines.push(`UID:${uidBase}-med-${idx}@gohealth`);
+        lines.push(`DTSTAMP:${dtstamp}`);
+        lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
+        lines.push(rrule); 
+        lines.push(`SUMMARY:用藥提醒：${m.name}（${MED_FREQ_LABEL[m.freq] || '用藥時間'}）`);
+        lines.push(`DESCRIPTION:${MED_FREQ_LABEL[m.freq] || ''}${m.dose ? '；劑量/用法：' + m.dose : ''}`);
 
-    return { 
-      id: row.dataset.id || crypto.randomUUID(),
-      type: row.dataset.type || 'oral',
-      name: row.querySelector('.med-name')?.value.trim() || '',
-      dose: row.querySelector('.med-dose')?.value.trim() || '',
-      freq: row.querySelector('.med-freq')?.value || 'preB',
-      time: row.querySelector('.med-time')?.value || defaultTimeForFreq('preB'),
-      enableRemind: !!row.querySelector('.med-enable')?.checked,
-      leadMinutes: Number(row.querySelector('.med-lead')?.value || 30),
-      cycle: cycle,
-      days: days
+        if(m.enableRemind){
+          lines.push('BEGIN:VALARM');
+          lines.push(`TRIGGER:-PT${m.leadMinutes || 30}M`);
+          lines.push('ACTION:DISPLAY');
+          lines.push(`DESCRIPTION:${MED_FREQ_LABEL[m.freq] || '用藥時間'}：請依醫囑服用 ${m.name}`);
+          lines.push('END:VALARM');
+        }
+        lines.push('END:VEVENT');
+      });
+      lines.push('END:VCALENDAR');
+      return lines.join('\r\n');
+    }
+
+    function downloadMedsICS(){
+      const meds = collectMedRows(); 
+      if(meds.length === 0){ toast('請至少填寫一筆藥品名稱再匯出', 'err'); return; }
+      const blob = new Blob([buildMedsICS(meds)], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'gohealth-medication-reminders.ics';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast('已匯出用藥行事曆檔案（.ics）', 'ok');
+    }
+
+    document.getElementById('addOralRowBtn')?.addEventListener('click', () => document.getElementById('oralList').appendChild(createMedRow('oral')));
+    document.getElementById('addInsRowBtn')?.addEventListener('click', () => document.getElementById('insList').appendChild(createMedRow('ins')));
+    document.getElementById('saveMedsBtn')?.addEventListener('click', saveMeds);
+    document.getElementById('clearMedsBtn')?.addEventListener('click', clearMeds);
+    document.getElementById('downloadMedsICSBtn')?.addEventListener('click', downloadMedsICS);
+    loadMeds();
+
+    /* ================ (七) 輪詢提醒與統計機制 ================ */
+    let globalMedsCache = [];
+    async function syncMedsCacheForReminders() {
+      try { const res = await fetch(`${API_BASE}/meds/${currentUserId}`); const json = await res.json(); globalMedsCache = json.data || []; } catch(e) {}
+    }
+    syncMedsCacheForReminders(); 
+
+    let globalRemindersCache = null;
+    async function syncRemindersCache() {
+      try { const res = await fetch(`${API_BASE}/reminders/${currentUserId}`); const json = await res.json(); globalRemindersCache = json.data || null; } catch(e) {}
+    }
+    syncRemindersCache();
+
+    window.__gluReminderCheck = function() {
+      if (!globalRemindersCache) return;
+      const now = new Date();
+      const hhmmNow = `${fmt2(now.getHours())}:${fmt2(now.getMinutes())}`;
+      const todayDay = now.getDay(); 
+
+      const checks = [
+        { title: '餐前', val: globalRemindersCache.tPreMeal },
+        { title: '餐後', val: globalRemindersCache.tPostMeal },
+        { title: '睡前', val: globalRemindersCache.tBedtime }
+      ];
+
+      checks.forEach(c => {
+        const parsed = parseRem(c.val);
+        if (parsed && parsed.days.includes(todayDay) && parsed.time === hhmmNow) {
+          const titleMsg = '🩸 血糖量測提醒';
+          const body = `時間到了！請進行「${c.title}」血糖量測，並回填至穩糖圈喔！`;
+          if ("Notification" in window && Notification.permission === "granted") new Notification(titleMsg, { body });
+          const box = document.getElementById('reminderResult');
+          if (box) { box.textContent = body; box.className = 'result ok'; }
+        }
+      });
     };
-  }).filter(m => m.name);
-}
 
-function renderMedsFromData(data) {
-  const oralList = document.getElementById('oralList');
-  const insList  = document.getElementById('insList');
-  oralList.innerHTML = ''; insList.innerHTML = '';
-  const meds = Array.isArray(data) ? data : [];
-  const oralMeds = meds.filter(m => m.type === 'oral');
-  const insMeds  = meds.filter(m => m.type === 'ins');
+    window.__medReminderCheck = function () {
+      if (!Array.isArray(globalMedsCache) || globalMedsCache.length === 0) return;
+      const now = new Date();
+      const hhmmNow = `${fmt2(now.getHours())}:${fmt2(now.getMinutes())}`;
+      const todayDay = now.getDay(); 
 
-  if (oralMeds.length === 0) oralList.appendChild(createMedRow('oral'));
-  else oralMeds.forEach(m => oralList.appendChild(createMedRow('oral', m)));
+      globalMedsCache.forEach(m => {
+        if (!m.enableRemind || !m.name || !m.time) return;
+        if (m.cycle === 'weekly' && Array.isArray(m.days) && m.days.length > 0) {
+          if (!m.days.includes(todayDay)) return; 
+        }
+        const lead = (typeof m.leadMinutes === 'number') ? m.leadMinutes : 30;
+        const remindAt = timeMinusMinutes(m.time, lead);
+        
+        if (remindAt === hhmmNow) {
+          const title = '💊 用藥提醒';
+          const body = `${MED_FREQ_LABEL[m.freq] || '用藥時間'}：請依醫囑服用 ${m.name}${m.dose ? '（' + m.dose + '）' : ''}`;
+          if ("Notification" in window && Notification.permission === "granted") new Notification(title, { body });
+          const box = document.getElementById('medsResult');
+          if (box) { box.textContent = body; box.className = 'result ok'; }
+        }
+      });
+    };
 
-  if (insMeds.length === 0) insList.appendChild(createMedRow('ins'));
-  else insMeds.forEach(m => insList.appendChild(createMedRow('ins', m)));
-}
+    setInterval(() => {
+      if (typeof window.__medReminderCheck === 'function') window.__medReminderCheck();
+      if (typeof window.__gluReminderCheck === 'function') window.__gluReminderCheck();
+    }, 60000);
 
-async function saveMeds() {
-  const meds = collectMedRows(); 
-  if (meds.length === 0) { toast('請至少填寫一筆藥品名稱', 'err'); return; }
-  try {
-    await fetch(`${API_BASE}/meds/sync`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: currentUserId, meds })
-    });
-    document.getElementById('medsResult').textContent = '已儲存用藥提醒。'; 
-    document.getElementById('medsResult').className = 'result ok';
-    toast('已儲存', 'ok');
-    syncMedsCacheForReminders();
-  } catch(e) { toast('儲存失敗', 'err'); }
-}
-
-async function loadMeds() {
-  try {
-    const res = await fetch(`${API_BASE}/meds/${currentUserId}`);
-    const json = await res.json();
-    renderMedsFromData(json.data || []);
-  } catch (e) { renderMedsFromData([]); }
-}
-
-async function clearMeds() {
-  if (!confirm('確定要清除所有用藥設定？')) return;
-  try {
-    await fetch(`${API_BASE}/meds/${currentUserId}`, { method: 'DELETE' });
-    renderMedsFromData([]);
-    document.getElementById('medsResult').textContent = '已清除所有設定。'; 
-    document.getElementById('medsResult').className = 'result';
-  } catch(e) { toast('清除失敗', 'err'); }
-}
-
-document.getElementById('addOralRowBtn').addEventListener('click', () => {
-  document.getElementById('oralList').appendChild(createMedRow('oral'));
-});
-document.getElementById('addInsRowBtn').addEventListener('click', () => {
-  document.getElementById('insList').appendChild(createMedRow('ins'));
-});
-document.getElementById('saveMedsBtn').addEventListener('click', saveMeds);
-document.getElementById('clearMedsBtn').addEventListener('click', clearMeds);
-loadMeds();
-
-/* =======================================================
-   (新增) 行事曆 (.ics) 匯出功能模組
-   ======================================================= */
-
-// 1. 共用工具函數
-function pad2(n){ return String(n).padStart(2,'0'); }
-
-// 轉換為 ICS 格式的本地時間 (YYYYMMDDTHHMM00)
-function icsDateTimeLocal(d){
-  return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
-}
-
-// 尋找「下一次」發生這個時間的日期
-function nextOccurrenceForTime(hhmm){
-  const [hh, mm] = (hhmm || '08:00').split(':').map(x => parseInt(x, 10));
-  const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh || 0, mm || 0, 0);
-  if(d.getTime() <= now.getTime()){
-    d.setDate(d.getDate() + 1); // 如果今天的時間已經過了，就從明天開始
-  }
-  return d;
-}
-
-// ==========================================
-// 2. 血糖監測與回診提醒 .ics
-// ==========================================
-function buildICS(rem){
-  const lines = [];
-  const dtstamp = icsDateTimeLocal(new Date());
-  const uidBase = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
-
-  lines.push('BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//go Health//Reminders//ZH-TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
-
-  // 每日血糖提醒
-  const dailyItems = [
-    { key:'tPreMeal',  title:'血糖提醒：早餐前量測', time: rem.tPreMeal },
-    { key:'tPostMeal', title:'血糖提醒：晚餐後量測', time: rem.tPostMeal },
-    { key:'tBedtime',  title:'血糖提醒：睡前量測',   time: rem.tBedtime },
-  ];
-
-  dailyItems.forEach((it, idx)=>{
-    if(!it.time) return;
-    const start = nextOccurrenceForTime(it.time);
-    lines.push('BEGIN:VEVENT', `UID:${uidBase}-glu-${idx}@gohealth`, `DTSTAMP:${dtstamp}`, `DTSTART:${icsDateTimeLocal(start)}`, `RRULE:FREQ=DAILY`, `SUMMARY:${it.title}`, 'DESCRIPTION:由「穩糖圈 go Health」匯出的每日提醒', 'END:VEVENT');
-  });
-
-  // 單次門診回診提醒
-  if(rem.nextAppt){
-    const [Y, M, D] = rem.nextAppt.split('-').map(x=>parseInt(x,10));
-    const appt = new Date(Y, (M||1)-1, D||1, 9, 0, 0); // 預設為早上 09:00
-    lines.push('BEGIN:VEVENT', `UID:${uidBase}-appt@gohealth`, `DTSTAMP:${dtstamp}`, `DTSTART:${icsDateTimeLocal(appt)}`, `DTEND:${icsDateTimeLocal(new Date(appt.getTime()+30*60*1000))}`, 'SUMMARY:門診追蹤回診提醒', 'DESCRIPTION:由「穩糖圈 go Health」匯出的門診回診事件', 'END:VEVENT');
-  }
-
-  lines.push('END:VCALENDAR');
-  return lines.join('\r\n');
-}
-
-function downloadICS(){
-  // 從畫面上直接抓取資料 (確保是最新的)
-  const rem = {
-    tPreMeal: document.getElementById('tPreMeal').value || '',
-    tPostMeal: document.getElementById('tPostMeal').value || '',
-    tBedtime: document.getElementById('tBedtime').value || '',
-    nextAppt: document.getElementById('nextAppt').value || '',
-  };
-
-  const hasAny = rem.tPreMeal || rem.tPostMeal || rem.tBedtime || rem.nextAppt;
-  if(!hasAny){
-    toast('請至少填一個提醒時間或回診日期再匯出','err');
-    return;
-  }
-
-  const ics = buildICS(rem);
-  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'gohealth-reminders.ics';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  toast('已匯出行事曆檔案 (.ics)','ok');
-}
-
-// ==========================================
-// 3. 用藥提醒 .ics
-// ==========================================
-function buildMedsICS(meds){
-  const lines = [];
-  const dtstamp = icsDateTimeLocal(new Date());
-  const uidBase = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
-
-  lines.push('BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//go Health//Medication Reminders//ZH-TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
-
-  meds.forEach((m, idx) => {
-    if(!m.name) return;
-
-    const times = [{ label: MED_FREQ_LABEL[m.freq] || '用藥時間', time: m.time }];
-    const lead = Number(m.leadMinutes || 30);
-
-    times.forEach((t, timeIdx) => {
-      if(!t.time) return;
-      const start = nextOccurrenceForTime(t.time);
-
-      // 🟢 判斷是每天還是特定星期幾
-      let rrule = 'RRULE:FREQ=DAILY';
-      if (m.cycle === 'weekly' && Array.isArray(m.days) && m.days.length > 0) {
-        const dayMap = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']; // 行事曆的星期代碼
-        const daysStr = m.days.map(d => dayMap[d]).join(',');
-        rrule = `RRULE:FREQ=WEEKLY;BYDAY=${daysStr}`;
-      }
-
-      lines.push('BEGIN:VEVENT');
-      lines.push(`UID:${uidBase}-med-${idx}-${timeIdx}@gohealth`);
-      lines.push(`DTSTAMP:${dtstamp}`);
-      lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
-      lines.push(rrule); // 寫入週期規則
-      lines.push(`SUMMARY:用藥提醒：${m.name}（${t.label || '用藥時間'}）`);
-      lines.push(`DESCRIPTION:${t.label || ''}${m.dose ? '；劑量/用法：' + m.dose : ''}`);
-
-      if(m.enableRemind){
-        lines.push('BEGIN:VALARM');
-        lines.push(`TRIGGER:-PT${lead}M`);
-        lines.push('ACTION:DISPLAY');
-        lines.push(`DESCRIPTION:${t.label || '用藥時間'}：請依醫囑服用 ${m.name}`);
-        lines.push('END:VALARM');
-      }
-      lines.push('END:VEVENT');
-    });
-  });
-
-  lines.push('END:VCALENDAR');
-  return lines.join('\r\n');
-}
-
-function downloadMedsICS(){
-  const meds = collectMedRows(); // 使用你現有的 collectMedRows 抓取畫面上填的資料
-
-  if(meds.length === 0){
-    toast('請至少填寫一筆藥品名稱再匯出', 'err');
-    return;
-  }
-
-  const ics = buildMedsICS(meds);
-  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'gohealth-medication-reminders.ics';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  toast('已匯出用藥行事曆檔案（.ics）', 'ok');
-}
-
-// 綁定按鈕事件
-document.getElementById('downloadICSBtn')?.addEventListener('click', downloadICS);
-document.getElementById('downloadMedsICSBtn')?.addEventListener('click', downloadMedsICS);
-
-// === 背景輪詢提醒功能 ===
-let globalMedsCache = [];
-async function syncMedsCacheForReminders() {
-  try {
-    const res = await fetch(`${API_BASE}/meds/${currentUserId}`);
-    const json = await res.json();
-    globalMedsCache = json.data || [];
-  } catch(e) {}
-}
-syncMedsCacheForReminders(); 
-
-// ==========================================
-// 🟢 新增：血糖提醒的 PWA 快取與檢查邏輯
-// ==========================================
-let globalRemindersCache = null;
-
-async function syncRemindersCache() {
-  try {
-    const res = await fetch(`${API_BASE}/reminders/${currentUserId}`);
-    const json = await res.json();
-    globalRemindersCache = json.data || null;
-  } catch(e) {}
-}
-syncRemindersCache(); // 網頁載入時立刻抓取一次
-
-window.__gluReminderCheck = function() {
-  if (!globalRemindersCache) return;
-  const now = new Date();
-  const hhmmNow = `${fmt2(now.getHours())}:${fmt2(now.getMinutes())}`;
-  const todayDay = now.getDay(); // 取得今天星期幾 (0 是週日, 1 是週一)
-
-  const checks = [
-    { val: globalRemindersCache.tPreMeal, title: '早餐前' },
-    { val: globalRemindersCache.tPostMeal, title: '晚餐後' },
-    { val: globalRemindersCache.tBedtime, title: '睡前' }
-  ];
-
-  checks.forEach(c => {
-    // 使用 parseRem 將 "07:30|1,3,5" 拆解還原
-    const parsed = parseRem(c.val);
-    
-    // 檢查今天是否有被勾選，並且現在的時間剛好吻合
-    if (parsed && parsed.days.includes(todayDay) && parsed.time === hhmmNow) {
-      const title = '🩸 血糖量測提醒';
-      const body = `時間到了！請進行「${c.title}」血糖量測，並回填至穩糖圈喔！`;
-
-      // 若有開啟瀏覽器通知，則跳出 PWA 通知
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(title, { body });
-      }
-      
-      const box = document.getElementById('reminderResult');
-      if (box) { box.textContent = body; box.className = 'result ok'; }
-    }
-  });
-};
-
-window.__medReminderCheck = function () {
-  if (!Array.isArray(globalMedsCache) || globalMedsCache.length === 0) return;
-  const now = new Date();
-  const hhmmNow = `${fmt2(now.getHours())}:${fmt2(now.getMinutes())}`;
-  const todayDay = now.getDay(); // 取得今天星期幾 (0-6)
-
-  globalMedsCache.forEach(m => {
-    if (!m.enableRemind || !m.name || !m.time) return;
-    
-    // 🟢 如果是每週特定天，但今天沒打勾，就直接跳過不提醒！
-    if (m.cycle === 'weekly' && Array.isArray(m.days) && m.days.length > 0) {
-      if (!m.days.includes(todayDay)) return; 
-    }
-
-    const lead = (typeof m.leadMinutes === 'number') ? m.leadMinutes : 30;
-    const remindAt = timeMinusMinutes(m.time, lead);
-    
-    if (remindAt === hhmmNow) {
-      const freqLabel = MED_FREQ_LABEL[m.freq] || '用藥時間';
-      const title = '💊 用藥提醒';
-      const body = `${freqLabel}：請依醫囑服用 ${m.name}${m.dose ? '（' + m.dose + '）' : ''}`;
-
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(title, { body });
-      }
-      
-      const box = document.getElementById('medsResult');
-      if (box) { box.textContent = body; box.className = 'result ok'; }
-    }
-  });
-};
-
-// 【關鍵】：每 60 秒執行一次檢查用藥提醒
-setInterval(() => {
-  if (typeof window.__medReminderCheck === 'function') {
-    window.__medReminderCheck();
-  }
-  // 🟢 補上呼叫血糖檢查
-  if (typeof window.__gluReminderCheck === 'function') {
-    window.__gluReminderCheck();
-  }
-}, 60000);
-
-    /* ================ (六) 使用時間與衛教觀看時間 (API 整合版) ================ */
+    /* ================ (八) 使用時間統計 ================ */
     const sessionStart = Date.now();
     let eduStart = null;
     let eduAccum = 0; 
 
-    // 1. 初始化：網頁載入時，先從 MongoDB 抓取歷史累計資料
     async function initStatsFromDB() {
       try {
         const res = await fetch(`${API_BASE}/stats/${currentUserId}`);
         const json = await res.json();
         if (json.data && Object.keys(json.data).length > 0) {
-          // 把資料庫的進度寫入 LocalStorage，讓接下來的計時器接續計算
           localStorage.setItem('totalUsedSec', json.data.totalUsedSec || 0);
           localStorage.setItem('eduWatchSec', json.data.eduWatchSec || 0);
           localStorage.setItem('countMsg', json.data.countMsg || 0);
           localStorage.setItem('countGlu', json.data.countGlu || 0);
         }
       } catch(e) { }
-      
       updateCounters();
       eduAccum = Number(localStorage.getItem('eduWatchSec')||'0');
     }
-    initStatsFromDB(); // 執行初始化
+    initStatsFromDB(); 
 
-    // 2. 更新互動次數的畫面
     function updateCounters(){
       $('countMsg').textContent = Number(localStorage.getItem('countMsg')||'0');
       $('countGlu').textContent = Number(localStorage.getItem('countGlu')||'0');
     }
 
-    // 3. 畫面計時器：每 1 秒更新畫面 (完全不打 API，效能最好)
     setInterval(()=>{
       const now = Date.now();
       const sessionSec = (now - sessionStart)/1000;
       $('sessionTime').textContent = mmss(sessionSec);
-      
       const prev = Number(localStorage.getItem('totalUsedSec')||'0');
-      const total = prev + sessionSec;
-      $('totalTime').textContent = mmss(total);
+      $('totalTime').textContent = mmss(prev + sessionSec);
     }, 1000);
 
-    // 4. 衛教影片觀看計算 (當影片出現在畫面上才計時)
     const io = new IntersectionObserver(entries=>{
       entries.forEach(e=>{
-        if(e.isIntersecting){
-          eduStart = Date.now(); // 進入畫面，開始計時
-        }else if(eduStart){
-          eduAccum += Math.floor((Date.now()-eduStart)/1000); // 離開畫面，結算剛看多久
+        if(e.isIntersecting){ eduStart = Date.now(); }
+        else if(eduStart){
+          eduAccum += Math.floor((Date.now()-eduStart)/1000);
           eduStart = null;
           localStorage.setItem('eduWatchSec', eduAccum);
           $('eduWatchTime').textContent = `觀看 ${mmss(eduAccum)}`;
         }
       });
     }, {threshold:0.5});
-    io.observe($('videoBox'));
+    if($('videoBox')) io.observe($('videoBox'));
 
-    // 影片畫面秒數更新
     setInterval(()=>{
       const curr = eduStart ? eduAccum + Math.floor((Date.now()-eduStart)/1000) : eduAccum;
       $('eduWatchTime').textContent = `觀看 ${mmss(curr)}`;
     }, 1000);
 
-    // 5. 同步資料到 MongoDB 的專用函數
     async function syncStatsToDB() {
-      // 計算目前這次開網頁累積了多少秒
       const used = Math.floor((Date.now() - sessionStart) / 1000);
       const prev = Number(localStorage.getItem('totalUsedSec') || '0');
-      
-      // 確保影片時間是最新的
       let currentEduAccum = eduAccum;
-      if (eduStart) {
-         currentEduAccum += Math.floor((Date.now() - eduStart) / 1000);
-      }
+      if (eduStart) currentEduAccum += Math.floor((Date.now() - eduStart) / 1000);
 
       const payload = {
-        userId: currentUserId,
-        totalUsedSec: prev + used, // 總時間 = 過去總計 + 這次看了多久
-        eduWatchSec: currentEduAccum,
-        countMsg: Number(localStorage.getItem('countMsg')||'0'),
-        countGlu: Number(localStorage.getItem('countGlu')||'0')
+        userId: currentUserId, totalUsedSec: prev + used, eduWatchSec: currentEduAccum,
+        countMsg: Number(localStorage.getItem('countMsg')||'0'), countGlu: Number(localStorage.getItem('countGlu')||'0')
       };
 
-      try {
-        await fetch(`${API_BASE}/stats`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          keepalive: true // 確保網頁關閉時，請求還是能成功發送給伺服器
-        });
+      try { await fetch(`${API_BASE}/stats`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true });
       } catch(e) { }
     }
 
-    // 6. 離開網頁前觸發 (寫入 localStorage 並同步到雲端)
     window.addEventListener('beforeunload', ()=>{
       const used = Math.floor((Date.now()-sessionStart)/1000);
-      const prev = Number(localStorage.getItem('totalUsedSec')||'0');
-      localStorage.setItem('totalUsedSec', prev + used);
-      
-      if (eduStart) {
-         eduAccum += Math.floor((Date.now()-eduStart)/1000);
-         localStorage.setItem('eduWatchSec', eduAccum);
-      }
-
+      localStorage.setItem('totalUsedSec', Number(localStorage.getItem('totalUsedSec')||'0') + used);
+      if (eduStart) { eduAccum += Math.floor((Date.now()-eduStart)/1000); localStorage.setItem('eduWatchSec', eduAccum); }
       syncStatsToDB();
     });
 
-    // 7. 每 60 秒定期自動備份一次到雲端，避免手機瀏覽器直接被滑掉刪除 (無觸發 unload)
     setInterval(syncStatsToDB, 60000);
 
-    /* ================ (六) 結束 ================ */
-
+    /* ================ Toast 提示 ================ */
     function toast(msg, type){
       const el = document.createElement('div');
       el.textContent = msg;
       el.style.position='fixed'; el.style.bottom='20px'; el.style.left='50%'; el.style.transform='translateX(-50%)';
-      el.style.background= (type==='ok'? '#2E7D32' : '#D32F2F');
-      el.style.color='#fff'; el.style.padding='10px 14px'; el.style.borderRadius='6px'; el.style.boxShadow='0 2px 6px rgba(0,0,0,.2)';
+      el.style.background= (type==='ok'? '#2E7D32' : '#D32F2F'); el.style.color='#fff'; 
+      el.style.padding='10px 14px'; el.style.borderRadius='6px'; el.style.boxShadow='0 2px 6px rgba(0,0,0,.2)';
       el.style.zIndex='9999'; document.body.appendChild(el);
       setTimeout(()=>{ el.remove(); }, 1800);
     }
