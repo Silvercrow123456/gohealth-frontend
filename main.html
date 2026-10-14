@@ -627,13 +627,12 @@
             <div class="reminder-title" style="font-weight: bold; margin-bottom: 10px;">一、血糖監測提醒</div>
             <div class="reminder-fields">
               
-              <!-- 早餐前 -->
+              <!-- 🟢 1. 餐前 (只有標題 + 時鐘 + 星期) -->
               <div class="field" style="margin-bottom: 15px; border-bottom: 1px dashed #eee; padding-bottom: 10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                  <label for="tPreMeal" style="margin:0;">早餐前</label> 
+                  <label for="tPreMeal" style="margin:0; font-weight:bold;">餐前</label> 
                   <input type="time" id="tPreMeal" style="width:auto; margin:0;" />
                 </div>
-                <!-- 🟢 加入 inline-flex 覆蓋預設 CSS，讓星期乖乖橫排 -->
                 <div style="font-size: 0.95em; color: #555; display: flex; flex-wrap: wrap; gap: 8px;">
                   <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPreMeal" value="1" style="width:auto; margin:0 4px 0 0;">一</label>
                   <label style="display:inline-flex; align-items:center; font-weight:normal; margin:0;"><input type="checkbox" name="daysPreMeal" value="2" style="width:auto; margin:0 4px 0 0;">二</label>
@@ -645,10 +644,10 @@
                 </div>
               </div>
 
-              <!-- 晚餐後 -->
+              <!-- 🟢 2. 餐後 (只有標題 + 時鐘 + 星期) -->
               <div class="field" style="margin-bottom: 15px; border-bottom: 1px dashed #eee; padding-bottom: 10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                  <label for="tPostMeal" style="margin:0;">晚餐後</label> 
+                  <label for="tPostMeal" style="margin:0; font-weight:bold;">餐後</label> 
                   <input type="time" id="tPostMeal" style="width:auto; margin:0;" />
                 </div>
                 <div style="font-size: 0.95em; color: #555; display: flex; flex-wrap: wrap; gap: 8px;">
@@ -662,10 +661,10 @@
                 </div>
               </div>
 
-              <!-- 睡前 -->
+              <!-- 🟢 3. 睡前 (只有標題 + 時鐘 + 星期) -->
               <div class="field" style="margin-bottom: 10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                  <label for="tBedtime" style="margin:0;">睡前</label> 
+                  <label for="tBedtime" style="margin:0; font-weight:bold;">睡前</label> 
                   <input type="time" id="tBedtime" style="width:auto; margin:0;" />
                 </div>
                 <div style="font-size: 0.95em; color: #555; display: flex; flex-wrap: wrap; gap: 8px;">
@@ -1387,7 +1386,6 @@ function parseRem(val) {
   const parts = val.split('|');
   const time = parts[0];
   if (!time) return null;
-  // 解析數字，如果沒選就是空陣列
   const days = (parts.length > 1 && parts[1] !== "") ? parts[1].split(',').map(Number) : [];
   return { time, days };
 }
@@ -1397,7 +1395,6 @@ function encodeRem(timeId, daysName) {
   const t = document.getElementById(timeId).value;
   if (!t) return '';
   const cbs = Array.from(document.querySelectorAll(`input[name="${daysName}"]:checked`));
-  // 🟢 防呆：如果有填時間，但完全沒勾星期，視為「不提醒」，不存入時間
   if (cbs.length === 0) return ''; 
   const days = cbs.map(cb => cb.value).join(',');
   return `${t}|${days}`;
@@ -1405,7 +1402,6 @@ function encodeRem(timeId, daysName) {
 
 // 🟢 將字串解碼並打勾畫面
 function decodeRem(val, timeId, daysName) {
-  // 先把所有勾選取消
   document.querySelectorAll(`input[name="${daysName}"]`).forEach(cb => cb.checked = false);
   document.getElementById(timeId).value = '';
 
@@ -1464,7 +1460,6 @@ function icsDateTimeLocal(d){
   return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
 }
 
-// 🟢 找下一個符合星期的時間點
 function nextOccurrenceForTimeAndDays(hhmm, days) {
   const [hh, mm] = (hhmm || '00:00').split(':').map(x => parseInt(x, 10));
   const now = new Date();
@@ -1491,14 +1486,13 @@ function buildICS(rem){
   lines.push('BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//go Health//Reminders//ZH-TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH');
 
   const dailyItems = [
-    { key:'tPreMeal',  title:'血糖提醒：早餐前量測', val: rem.tPreMeal },
-    { key:'tPostMeal', title:'血糖提醒：晚餐後量測', val: rem.tPostMeal },
-    { key:'tBedtime',  title:'血糖提醒：睡前量測',   val: rem.tBedtime },
+    { title:'餐前', val: rem.tPreMeal },
+    { title:'餐後', val: rem.tPostMeal },
+    { title:'睡前', val: rem.tBedtime },
   ];
 
   dailyItems.forEach((it, idx)=>{
     const parsed = parseRem(it.val);
-    // 防呆：如果沒時間，或是沒有勾選任何星期，就不產生這個鬧鐘
     if(!parsed || !parsed.time || parsed.days.length === 0) return;
     
     const start = nextOccurrenceForTimeAndDays(parsed.time, parsed.days);
@@ -1516,7 +1510,7 @@ function buildICS(rem){
     lines.push(`DTSTART:${icsDateTimeLocal(start)}`);
     lines.push(`DTEND:${icsDateTimeLocal(end)}`);
     lines.push(rrule); 
-    lines.push(`SUMMARY:${it.title}`);
+    lines.push(`SUMMARY:血糖提醒：${it.title}量測`);
     lines.push('DESCRIPTION:由「穩糖圈 go Health」匯出的提醒');
 
     lines.push('BEGIN:VALARM');
@@ -1564,6 +1558,48 @@ function downloadICS(){
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
   toast('已匯出行事曆檔案 (.ics)','ok');
 }
+
+/* ================================================= */
+/* 往下尋找背景檢查函數也更新 */
+/* ================================================= */
+let globalRemindersCache = null;
+
+async function syncRemindersCache() {
+  try {
+    const res = await fetch(`${API_BASE}/reminders/${currentUserId}`);
+    const json = await res.json();
+    globalRemindersCache = json.data || null;
+  } catch(e) {}
+}
+syncRemindersCache();
+
+window.__gluReminderCheck = function() {
+  if (!globalRemindersCache) return;
+  const now = new Date();
+  const hhmmNow = `${fmt2(now.getHours())}:${fmt2(now.getMinutes())}`;
+  const todayDay = now.getDay(); 
+
+  const checks = [
+    { title: '餐前', val: globalRemindersCache.tPreMeal },
+    { title: '餐後', val: globalRemindersCache.tPostMeal },
+    { title: '睡前', val: globalRemindersCache.tBedtime }
+  ];
+
+  checks.forEach(c => {
+    const parsed = parseRem(c.val);
+    if (parsed && parsed.days.includes(todayDay) && parsed.time === hhmmNow) {
+      
+      const titleMsg = '🩸 血糖量測提醒';
+      const body = `時間到了！請進行「${c.title}」血糖量測，並回填至穩糖圈喔！`;
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(titleMsg, { body });
+      }
+      const box = document.getElementById('reminderResult');
+      if (box) { box.textContent = body; box.className = 'result ok'; }
+    }
+  });
+};
 
 /* 綁定提醒按鈕 */
 document.getElementById('saveRemindersBtn')?.addEventListener('click', saveReminders);
