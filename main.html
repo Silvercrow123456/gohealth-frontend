@@ -407,13 +407,18 @@
     </div>
   </div>
 
-  <!-- BMI：僅顯示數值 + 性別分級 -->
+  <!-- BMI 與 理想體重 -->
   <div class="hint" id="bmiBox" style="margin-top:.8em;">
     <div style="margin:.2em 0;">
       BMI：<strong id="bmi_value">—</strong>
       <span class="pill" id="bmi_tag">—</span>
     </div>
     <div class="muted" id="bmi_note">請輸入身高與體重以計算 BMI</div>
+    
+    <!-- 🟢 新增：理想體重顯示 -->
+    <div style="margin: .6em 0 .2em 0; border-top: 1px dashed #ccc; padding-top: .6em;">
+      理想體重：<strong id="ibw_value">—</strong> kg
+    </div>
   </div>
 
   <!-- 建議熱量計算 -->
@@ -1191,31 +1196,68 @@
       const elVal  = document.getElementById('bmi_value');
       const elTag  = document.getElementById('bmi_tag');
       const elNote = document.getElementById('bmi_note');
+      const elIbw  = document.getElementById('ibw_value'); // 抓取理想體重格子
+      
+      // 1. 計算 BMI
       if(bmi == null){
-        elVal.textContent = '—'; elTag.textContent = '—'; elNote.textContent = '請輸入身高與體重以計算 BMI'; return;
+        elVal.textContent = '—'; elTag.textContent = '—'; elNote.textContent = '請輸入身高與體重以計算 BMI'; 
+      } else {
+        const stat = bmiStatusBySex(sex, bmi);
+        elVal.textContent = round1(bmi); elTag.textContent = stat.label; elNote.textContent = '分級依衛福部成人 BMI 標準';
       }
-      const stat = bmiStatusBySex(sex, bmi);
-      elVal.textContent = round1(bmi); elTag.textContent = stat.label; elNote.textContent = '分級依衛福部成人 BMI 標準';
+
+      // 2. 🟢 計算理想體重 (IBW)
+      if (h != null && h > 0) {
+        let ibw = 0;
+        if (sex === 'male') {
+          ibw = (h - 80) * 0.7;
+        } else {
+          ibw = (h - 70) * 0.6;
+        }
+        ibw = Math.max(0, ibw); // 避免填錯數字出現負數
+        elIbw.textContent = round1(ibw);
+        elIbw.dataset.val = ibw; // 把理想體重偷偷存在這裡，給等一下算熱量用
+      } else {
+        elIbw.textContent = '—';
+        elIbw.dataset.val = '';
+      }
     }
+    
+    // 身高/體重/性別改動時，即時更新 BMI 與理想體重
     ['sex','height','weight'].forEach(id=>{ const el = document.getElementById(id); if(el) el.addEventListener('input', refreshBMIOnly); });
     refreshBMIOnly();
 
-    /* ====== 熱量估算 ====== */
+    /* ====== 熱量估算 (同時計算目前體重與理想體重) ====== */
     function kcalPerKgSimple(activity){
       const map = { bed:23, light:27, moderate:32, heavy:37 };
       return map[activity] || 27;
     }
+    
     function calcKcal(){
       const w = Number(document.getElementById('weight')?.value);
-      if(!w){
-        const box = document.getElementById('kcalResult'); box.className = 'result err'; box.textContent = '請先輸入體重'; return;
+      const elIbw = document.getElementById('ibw_value');
+      const ibw = Number(elIbw?.dataset.val); // 拿出剛剛算好的理想體重
+
+      const box = document.getElementById('kcalResult');
+      
+      if(!w || isNaN(ibw) || ibw <= 0){
+        box.className = 'result err'; 
+        box.textContent = '請先輸入正確的身高與體重'; 
+        return;
       }
+      
       const act = (document.querySelector('input[name="act"]:checked')||{}).value || 'light';
       const perKg = kcalPerKgSimple(act);
-      const kcal = Math.round(perKg * w);
-      const box = document.getElementById('kcalResult');
+      
+      const kcalCurrent = Math.round(perKg * w);
+      const kcalIdeal = Math.round(perKg * ibw);
+      
       box.className = 'result';
-      box.innerHTML = `建議熱量：<strong>${kcal}</strong> 大卡/天　<span class="muted">（每公斤體重 <strong>${perKg}</strong> 大卡 × 體重 <strong>${w}</strong> kg）</span>`;
+      // 🟢 同時顯示兩種熱量
+      box.innerHTML = `
+        <div style="margin-bottom: 8px;">建議熱量 (以<span style="color:#666;">目前體重</span>計算)：<strong>${kcalCurrent}</strong> 大卡/天 <span class="muted" style="font-size: 0.85em;">(${perKg} × ${w} kg)</span></div>
+        <div>建議熱量 (以<span style="color:var(--green);">理想體重</span>計算)：<strong style="color:var(--green);">${kcalIdeal}</strong> 大卡/天 <span class="muted" style="font-size: 0.85em;">(${perKg} × ${round1(ibw)} kg)</span></div>
+      `;
     }
     document.getElementById('calcKcalBtn').addEventListener('click', calcKcal);
 
